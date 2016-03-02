@@ -10,6 +10,7 @@ find_package(Qt5Network REQUIRED)
 
 set(${PROJECT_NAME}_CORE_SRCS
     core/globals.h
+    core/qobjectptr.h
     core/ijob.h
     core/ijobfactory.h
     core/pipe.h

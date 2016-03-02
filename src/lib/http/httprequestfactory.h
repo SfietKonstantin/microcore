@@ -35,15 +35,16 @@
 #include "core/globals.h"
 #include "core/ijobfactory.h"
 #include "http/httprequest.h"
+#include "http/httptypes.h"
 #include <QNetworkAccessManager>
 
 namespace microcore { namespace http {
 
-class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, QByteArray, QString>
+class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, QObjectPtr<QIODevice>, QString>
 {
 public:
     explicit HttpRequestFactory(QNetworkAccessManager &network);
-    std::unique_ptr< ::microcore::core::IJob<QByteArray, QString>> create(HttpRequest &&request) const override;
+    std::unique_ptr<HttpJob> create(HttpRequest &&request) const override;
 private:
     QNetworkAccessManager &m_network;
 };

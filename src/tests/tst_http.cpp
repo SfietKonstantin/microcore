@@ -42,7 +42,7 @@ using namespace ::testing;
 using namespace ::microcore::core;
 using namespace ::microcore::http;
 
-using HttpPipe = Pipe<HttpRequest, QByteArray, QString>;
+using HttpPipe = Pipe<HttpRequest, HttpResult, HttpError>;
 
 class TstHttp: public Test
 {
@@ -54,7 +54,7 @@ protected:
     }
     QNetworkAccessManager m_network;
     std::unique_ptr<HttpRequestFactory> m_factory;
-    MockJobCallback<QByteArray, QString> m_callback;
+    MockJobCallback<HttpResult, HttpError> m_callback;
     std::unique_ptr<HttpPipe> m_pipe;
 };
 
@@ -62,7 +62,7 @@ TEST_F(TstHttp, TestSimpleSuccess)
 {
     // Mock
     bool called = false;
-    EXPECT_CALL(m_callback, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const QByteArray &) {
+    EXPECT_CALL(m_callback, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &) {
         called = true;
     }));
     QElapsedTimer timer;
