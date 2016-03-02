@@ -40,10 +40,11 @@
 
 namespace microcore { namespace http {
 
-class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, QObjectPtr<QIODevice>, QString>
+class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, HttpResult, HttpError>
 {
 public:
     explicit HttpRequestFactory(QNetworkAccessManager &network);
+    DISABLE_COPY_DISABLE_MOVE(HttpRequestFactory);
     std::unique_ptr<HttpJob> create(HttpRequest &&request) const override;
 private:
     QNetworkAccessManager &m_network;

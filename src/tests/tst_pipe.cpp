@@ -107,11 +107,11 @@ protected:
        m_bcPipe.reset(new BCPipe(m_bcFactory, m_callback));
        m_abPipe = m_bcPipe->prepend<ResultA>(m_abFactory);
     }
-    ABFactory m_abFactory;
-    BCFactory m_bcFactory;
-    Callback m_callback;
-    std::unique_ptr<ABPipe> m_abPipe;
-    std::unique_ptr<BCPipe> m_bcPipe;
+    ABFactory m_abFactory {};
+    BCFactory m_bcFactory {};
+    Callback m_callback {};
+    std::unique_ptr<ABPipe> m_abPipe {};
+    std::unique_ptr<BCPipe> m_bcPipe {};
 };
 
 TEST_F(TstPipe, TestSimpleSuccess)
@@ -229,7 +229,7 @@ public:
         callback.onResult(std::move(m_result));
     }
 private:
-    TestOnlyMovable m_result;
+    TestOnlyMovable m_result {};
 };
 
 class TestOnlyMovableResultJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
@@ -253,7 +253,7 @@ public:
         callback.onError(std::move(m_error));
     }
 private:
-    TestOnlyMovable m_error;
+    TestOnlyMovable m_error {};
 };
 
 class TestOnlyMovableErrorJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
@@ -273,9 +273,9 @@ TEST_F(TstPipe, OnlyMovableConstructible)
     TestOnlyMovableResultJobFactory factory;
     TestOnlyMovableCallback callback;
 
-    std::unique_ptr<TestOnlyMovablePipe> pipe3 (new TestOnlyMovablePipe(factory, callback));
-    std::unique_ptr<TestOnlyMovablePipe> pipe2 = pipe3->prepend<TestOnlyMovable>(factory);
-    std::unique_ptr<TestOnlyMovablePipe> pipe1 = pipe2->prepend<TestOnlyMovable>(factory);
+    std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, callback)};
+    std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(factory)};
+    std::unique_ptr<TestOnlyMovablePipe> pipe1 {pipe2->prepend<TestOnlyMovable>(factory)};
 
     pipe1->send(TestOnlyMovable(123));
 }
@@ -286,9 +286,9 @@ TEST_F(TstPipe, OnlyMovableConstructibleWithError)
     TestOnlyMovableErrorJobFactory errorFactory;
     TestOnlyMovableCallback callback;
 
-    std::unique_ptr<TestOnlyMovablePipe> pipe3 (new TestOnlyMovablePipe(factory, callback));
-    std::unique_ptr<TestOnlyMovablePipe> pipe2 = pipe3->prepend<TestOnlyMovable>(errorFactory);
-    std::unique_ptr<TestOnlyMovablePipe> pipe1 = pipe2->prepend<TestOnlyMovable>(factory);
+    std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, callback)};
+    std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(errorFactory)};
+    std::unique_ptr<TestOnlyMovablePipe> pipe1 {pipe2->prepend<TestOnlyMovable>(factory)};
 
     pipe1->send(TestOnlyMovable(123));
 }

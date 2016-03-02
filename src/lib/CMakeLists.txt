@@ -17,16 +17,20 @@ set(${PROJECT_NAME}_CORE_SRCS
 )
 
 set(${PROJECT_NAME}_HTTP_SRCS
-   http/httprequest.cpp
-   http/httprequestfactory.cpp
+    http/httptypes.h
+    http/httprequest.cpp
+    http/httprequestfactory.cpp
 )
 
 set(${PROJECT_NAME}_JSON_SRCS
+    json/jsontypes.h
+    json/jsonrequestfactory.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC
     ${${PROJECT_NAME}_CORE_SRCS}
     ${${PROJECT_NAME}_HTTP_SRCS}
+    ${${PROJECT_NAME}_JSON_SRCS}
 )
 qt5_use_modules(${PROJECT_NAME} Core Network)
 

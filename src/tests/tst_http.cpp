@@ -52,20 +52,20 @@ protected:
        m_factory.reset(new HttpRequestFactory(m_network));
        m_pipe.reset(new HttpPipe(*m_factory, m_callback));
     }
-    QNetworkAccessManager m_network;
-    std::unique_ptr<HttpRequestFactory> m_factory;
-    MockJobCallback<HttpResult, HttpError> m_callback;
-    std::unique_ptr<HttpPipe> m_pipe;
+    QNetworkAccessManager m_network {};
+    std::unique_ptr<HttpRequestFactory> m_factory {};
+    MockJobCallback<HttpResult, HttpError> m_callback {};
+    std::unique_ptr<HttpPipe> m_pipe {};
 };
 
 TEST_F(TstHttp, TestSimpleSuccess)
 {
     // Mock
-    bool called = false;
+    bool called {false};
     EXPECT_CALL(m_callback, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &) {
         called = true;
     }));
-    QElapsedTimer timer;
+    QElapsedTimer timer {};
 
     // Test
     m_pipe->send(HttpRequest(HttpRequest::Type::Get, QNetworkRequest(QUrl("http://www.google.fr"))));
