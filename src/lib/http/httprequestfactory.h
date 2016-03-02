@@ -29,22 +29,25 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_IJOBFACTORY_H
-#define MICROCORE_CORE_IJOBFACTORY_H
+#ifndef MICROCORE_HTTP_HTTPREQUESTFACTORY_HPP
+#define MICROCORE_HTTP_HTTPREQUESTFACTORY_HPP
 
-#include <memory>
-#include "ijob.h"
+#include "core/globals.h"
+#include "core/ijobfactory.h"
+#include "http/httprequest.h"
+#include <QNetworkAccessManager>
 
-namespace microcore { namespace core {
+namespace microcore { namespace http {
 
-template<class Request, class Result, class Error>
-class IJobFactory
+class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, QByteArray, QString>
 {
 public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create(Request &&request) const = 0;
+    explicit HttpRequestFactory(QNetworkAccessManager &network);
+    std::unique_ptr< ::microcore::core::IJob<QByteArray, QString>> create(HttpRequest &&request) const override;
+private:
+    QNetworkAccessManager &m_network;
 };
 
 }}
 
-#endif // MICROCORE_CORE_IJOBFACTORY_H
+#endif // HTTPREQUESTFACTORY_HPP

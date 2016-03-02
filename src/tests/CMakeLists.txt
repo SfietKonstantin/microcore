@@ -24,6 +24,7 @@ set(${PROJECT_NAME}_SRCS
     mockjobfactory.h
     tst_main.cpp
     tst_pipe.cpp
+    tst_http.cpp
 )
 
 add_executable(${PROJECT_NAME}

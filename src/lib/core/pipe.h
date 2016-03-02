@@ -12,7 +12,7 @@ class Pipe
 {
 public:
     Pipe(IJobFactory<Request, Result, Error> &factory, typename IJob<Result, Error>::ICallback &callback)
-        : m_factory(factory), m_internalCallback(*this), m_callback(callback)
+        : m_factory(factory), m_internalCallback(*this), m_callback(*this, callback)
     {
     }
     template<class T>
@@ -31,10 +31,10 @@ public:
         m_callback.onError(std::move(error));
     }
 private:
-    class Callback: public IJob<Request, Error>::ICallback
+    class InternalCallback: public IJob<Request, Error>::ICallback
     {
     public:
-        explicit Callback(Pipe<Request, Result, Error> &parent)
+        explicit InternalCallback(Pipe<Request, Result, Error> &parent)
             : m_parent(parent)
         {
         }
@@ -49,10 +49,33 @@ private:
     private:
         Pipe<Request, Result, Error> &m_parent;
     };
+    class CallbackAdaptor: public IJob<Result, Error>::ICallback
+    {
+    public:
+        explicit CallbackAdaptor(Pipe<Request, Result, Error> &parent,
+                                 typename IJob<Result, Error>::ICallback &callback)
+            : m_parent(parent)
+            , m_callback(callback)
+        {
+        }
+        void onResult(Result &&result) override
+        {
+            m_parent.m_job.reset();
+            m_callback.onResult(std::move(result));
+        }
+        void onError(Error &&error) override
+        {
+            m_parent.m_job.reset();
+            m_callback.onError(std::move(error));
+        }
+    private:
+        Pipe<Request, Result, Error> &m_parent;
+        typename IJob<Result, Error>::ICallback &m_callback;
+    };
     IJobFactory<Request, Result, Error> &m_factory;
     std::unique_ptr<IJob<Result, Error>> m_job {};
-    Callback m_internalCallback;
-    typename IJob<Result, Error>::ICallback &m_callback;
+    InternalCallback m_internalCallback;
+    CallbackAdaptor m_callback;
 };
 
 }}

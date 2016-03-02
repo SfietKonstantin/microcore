@@ -117,16 +117,16 @@ protected:
 TEST_F(TstPipe, TestSimpleSuccess)
 {
     // Mock
-    EXPECT_CALL(m_abFactory, create(_)).Times(0);
-    EXPECT_CALL(m_abFactory, create(ResultA(1))).Times(1).WillRepeatedly(Invoke([](ResultA) {
+    EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
         EXPECT_CALL(*returned, execute(_)).Times(1).WillRepeatedly(Invoke([](BJob::ICallback &callback) {
            callback.onResult(ResultB(2));
         }));
         return returned;
     }));
-    EXPECT_CALL(m_bcFactory, create(_)).Times(0);
-    EXPECT_CALL(m_bcFactory, create(ResultB(2))).Times(1).WillRepeatedly(Invoke([](ResultB) {
+    EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
         EXPECT_CALL(*returned, execute(_)).Times(1).WillRepeatedly(Invoke([](CJob::ICallback &callback) {
            callback.onResult(ResultC(3));
@@ -144,16 +144,16 @@ TEST_F(TstPipe, TestSimpleSuccess)
 TEST_F(TstPipe, TestSimpleError1)
 {
     // Mock
-    EXPECT_CALL(m_abFactory, create(_)).Times(0);
-    EXPECT_CALL(m_abFactory, create(ResultA(1))).Times(1).WillRepeatedly(Invoke([](ResultA) {
+    EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
         EXPECT_CALL(*returned, execute(_)).Times(1).WillRepeatedly(Invoke([](BJob::ICallback &callback) {
            callback.onResult(ResultB(2));
         }));
         return returned;
     }));
-    EXPECT_CALL(m_bcFactory, create(_)).Times(0);
-    EXPECT_CALL(m_bcFactory, create(ResultB(2))).Times(1).WillRepeatedly(Invoke([](ResultB) {
+    EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
         EXPECT_CALL(*returned, execute(_)).Times(1).WillRepeatedly(Invoke([](CJob::ICallback &callback) {
            callback.onError(Error(3));
@@ -171,15 +171,15 @@ TEST_F(TstPipe, TestSimpleError1)
 TEST_F(TstPipe, TestSimpleError2)
 {
     // Mock
-    EXPECT_CALL(m_abFactory, create(_)).Times(0);
-    EXPECT_CALL(m_abFactory, create(ResultA(1))).Times(1).WillRepeatedly(Invoke([](ResultA) {
+    EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
         EXPECT_CALL(*returned, execute(_)).Times(1).WillRepeatedly(Invoke([](BJob::ICallback &callback) {
            callback.onError(Error(2));
         }));
         return returned;
     }));
-    EXPECT_CALL(m_bcFactory, create(_)).Times(0);
+    EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnResult(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnError(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnError(Error(2))).Times(1);
@@ -191,12 +191,104 @@ TEST_F(TstPipe, TestSimpleError2)
 TEST_F(TstPipe, TestSimpleError3)
 {
     // Mock
-    EXPECT_CALL(m_abFactory, create(_)).Times(0);
-    EXPECT_CALL(m_bcFactory, create(_)).Times(0);
+    EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnResult(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnError(_)).Times(0);
     EXPECT_CALL(m_callback, mockOnError(Error(1))).Times(1);
 
     // Test
     m_abPipe->sendError(Error(1));
+}
+
+class TestOnlyMovable
+{
+public:
+    explicit TestOnlyMovable() = default;
+    explicit TestOnlyMovable(int v) : value(v) {}
+    DISABLE_COPY_DEFAULT_MOVE(TestOnlyMovable);
+    int value {0};
+};
+
+class TestOnlyMovableCallback: public IJob<TestOnlyMovable, TestOnlyMovable>::ICallback
+{
+public:
+    void onResult(TestOnlyMovable &&) override {}
+    void onError(TestOnlyMovable &&) override {}
+};
+
+class TestOnlyMovableResultJob: public IJob<TestOnlyMovable, TestOnlyMovable>
+{
+public:
+    TestOnlyMovableResultJob(TestOnlyMovable &&result)
+        : m_result(std::move(result))
+    {
+    }
+    void execute(TestOnlyMovableResultJob::ICallback &callback) override
+    {
+        callback.onResult(std::move(m_result));
+    }
+private:
+    TestOnlyMovable m_result;
+};
+
+class TestOnlyMovableResultJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
+{
+public:
+    std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>> create(TestOnlyMovable &&request) const override
+    {
+        return std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>>(new TestOnlyMovableResultJob(std::move(request)));
+    }
+};
+
+class TestOnlyMovableErrorJob: public IJob<TestOnlyMovable, TestOnlyMovable>
+{
+public:
+    TestOnlyMovableErrorJob(TestOnlyMovable &&error)
+        : m_error(std::move(error))
+    {
+    }
+    void execute(TestOnlyMovableErrorJob::ICallback &callback) override
+    {
+        callback.onError(std::move(m_error));
+    }
+private:
+    TestOnlyMovable m_error;
+};
+
+class TestOnlyMovableErrorJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
+{
+public:
+    std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>> create(TestOnlyMovable &&request) const override
+    {
+        return std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>>(new TestOnlyMovableErrorJob(std::move(request)));
+    }
+};
+
+using TestOnlyMovablePipe = Pipe<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>;
+
+
+TEST_F(TstPipe, OnlyMovableConstructible)
+{
+    TestOnlyMovableResultJobFactory factory;
+    TestOnlyMovableCallback callback;
+
+    std::unique_ptr<TestOnlyMovablePipe> pipe3 (new TestOnlyMovablePipe(factory, callback));
+    std::unique_ptr<TestOnlyMovablePipe> pipe2 = pipe3->prepend<TestOnlyMovable>(factory);
+    std::unique_ptr<TestOnlyMovablePipe> pipe1 = pipe2->prepend<TestOnlyMovable>(factory);
+
+    pipe1->send(TestOnlyMovable(123));
+}
+
+TEST_F(TstPipe, OnlyMovableConstructibleWithError)
+{
+    TestOnlyMovableResultJobFactory factory;
+    TestOnlyMovableErrorJobFactory errorFactory;
+    TestOnlyMovableCallback callback;
+
+    std::unique_ptr<TestOnlyMovablePipe> pipe3 (new TestOnlyMovablePipe(factory, callback));
+    std::unique_ptr<TestOnlyMovablePipe> pipe2 = pipe3->prepend<TestOnlyMovable>(errorFactory);
+    std::unique_ptr<TestOnlyMovablePipe> pipe1 = pipe2->prepend<TestOnlyMovable>(factory);
+
+    pipe1->send(TestOnlyMovable(123));
 }

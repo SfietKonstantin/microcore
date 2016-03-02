@@ -42,7 +42,11 @@ class MockJobFactory: public IJobFactory<Request, Result, Error>
 {
 public:
     using Job = IJob<Result, Error>;
-    MOCK_CONST_METHOD1_T(create, std::unique_ptr<Job> (Request request));
+    std::unique_ptr<Job> create(Request &&request) const override
+    {
+        return mockCreate(request);
+    }
+    MOCK_CONST_METHOD1_T(mockCreate, std::unique_ptr<Job> (const Request &request));
 };
 
 }}

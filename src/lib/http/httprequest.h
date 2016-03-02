@@ -48,7 +48,7 @@ public:
         Delete
     };
     explicit HttpRequest() = default;
-    HttpRequest(Type type, QNetworkRequest request, QByteArray postData);
+    HttpRequest(Type type, QNetworkRequest request, QByteArray postData = QByteArray());
     DEFAULT_COPY_DEFAULT_MOVE(HttpRequest);
     Type type() const;
     QNetworkRequest request() const;

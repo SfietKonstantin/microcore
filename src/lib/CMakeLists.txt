@@ -17,6 +17,7 @@ set(${PROJECT_NAME}_CORE_SRCS
 
 set(${PROJECT_NAME}_HTTP_SRCS
    http/httprequest.cpp
+   http/httprequestfactory.cpp
 )
 
 set(${PROJECT_NAME}_JSON_SRCS

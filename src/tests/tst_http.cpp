@@ -29,22 +29,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_IJOBFACTORY_H
-#define MICROCORE_CORE_IJOBFACTORY_H
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
+#include <QtTest/QTest>
+#include <QElapsedTimer>
+#include "core/globals.h"
+#include "core/pipe.h"
+#include "http/httprequestfactory.h"
+#include "mockjob.h"
 
-#include <memory>
-#include "ijob.h"
+using namespace ::testing;
+using namespace ::microcore::core;
+using namespace ::microcore::http;
 
-namespace microcore { namespace core {
+using HttpPipe = Pipe<HttpRequest, QByteArray, QString>;
 
-template<class Request, class Result, class Error>
-class IJobFactory
+class TstHttp: public Test
 {
-public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create(Request &&request) const = 0;
+protected:
+    void SetUp() override
+    {
+       m_factory.reset(new HttpRequestFactory(m_network));
+       m_pipe.reset(new HttpPipe(*m_factory, m_callback));
+    }
+    QNetworkAccessManager m_network;
+    std::unique_ptr<HttpRequestFactory> m_factory;
+    MockJobCallback<QByteArray, QString> m_callback;
+    std::unique_ptr<HttpPipe> m_pipe;
 };
 
-}}
+TEST_F(TstHttp, TestSimpleSuccess)
+{
+    // Mock
+    bool called = false;
+    EXPECT_CALL(m_callback, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const QByteArray &) {
+        called = true;
+    }));
+    QElapsedTimer timer;
 
-#endif // MICROCORE_CORE_IJOBFACTORY_H
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Get, QNetworkRequest(QUrl("http://www.google.fr"))));
+    timer.start();
+    while (!called && !timer.hasExpired(30000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
