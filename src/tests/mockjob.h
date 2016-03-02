@@ -49,8 +49,16 @@ template<class Result, class Error>
 class MockJobCallback: public IJob<Result, Error>::ICallback
 {
 public:
-    MOCK_METHOD1_T(onResult, void (Result &&result));
-    MOCK_METHOD1_T(onError, void (Result &&error));
+    void onResult(Result &&result)
+    {
+        mockOnResult(result);
+    }
+    MOCK_METHOD1_T(mockOnResult, void (const Result &result));
+    void onError(Error &&error)
+    {
+        mockOnError(error);
+    }
+    MOCK_METHOD1_T(mockOnError, void (const Error &error));
 
 };
 

@@ -12,7 +12,7 @@ set(${PROJECT_NAME}_CORE_SRCS
     core/globals.h
     core/ijob.h
     core/ijobfactory.h
-    core/datasource.h
+    core/pipe.h
 )
 
 set(${PROJECT_NAME}_HTTP_SRCS

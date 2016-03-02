@@ -23,7 +23,7 @@ set(${PROJECT_NAME}_SRCS
     mockjob.h
     mockjobfactory.h
     tst_main.cpp
-    tst_datasource_simple.cpp
+    tst_pipe.cpp
 )
 
 add_executable(${PROJECT_NAME}
