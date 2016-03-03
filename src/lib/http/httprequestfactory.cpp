@@ -33,6 +33,7 @@
 #include <QNetworkReply>
 
 using namespace ::microcore::core;
+using namespace ::microcore::error;
 
 namespace microcore { namespace http {
 
@@ -67,7 +68,7 @@ public:
 
         QObject::connect(reply, &QNetworkReply::finished, [this, reply, &callback]() {
             if (reply->error() != QNetworkReply::NoError) {
-                callback.onError(reply->errorString());
+                callback.onError(Error("http", reply->errorString()));
             } else {
                 callback.onResult(std::move(m_result));
             }

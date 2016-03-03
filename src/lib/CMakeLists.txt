@@ -16,6 +16,10 @@ set(${PROJECT_NAME}_CORE_SRCS
     core/pipe.h
 )
 
+set(${PROJECT_NAME}_ERROR_SRCS
+    error/error.cpp
+)
+
 set(${PROJECT_NAME}_HTTP_SRCS
     http/httptypes.h
     http/httprequest.cpp
@@ -29,6 +33,7 @@ set(${PROJECT_NAME}_JSON_SRCS
 
 add_library(${PROJECT_NAME} STATIC
     ${${PROJECT_NAME}_CORE_SRCS}
+    ${${PROJECT_NAME}_ERROR_SRCS}
     ${${PROJECT_NAME}_HTTP_SRCS}
     ${${PROJECT_NAME}_JSON_SRCS}
 )

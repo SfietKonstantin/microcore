@@ -34,12 +34,13 @@
 
 #include "core/qobjectptr.h"
 #include "core/ijob.h"
+#include "error/error.h"
 #include <QIODevice>
 
 namespace microcore { namespace http {
 
 using HttpResult = QObjectPtr<QIODevice>;
-using HttpError = QString;
+using HttpError = ::microcore::error::Error;
 using HttpJob = ::microcore::core::IJob<HttpResult, HttpError>;
 
 }}

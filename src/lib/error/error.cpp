@@ -29,22 +29,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_JSON_JSONTYPES_H
-#define MICROCORE_JSON_JSONTYPES_H
+#include "error.h"
 
-#include "core/qobjectptr.h"
-#include "core/ijob.h"
-#include "error/error.h"
-#include <QIODevice>
-#include <QJsonDocument>
+namespace microcore { namespace error {
 
-namespace microcore { namespace json {
+Error::Error(const std::string &id, const QString &message)
+    : m_id(id), m_message(message)
+{
+}
 
-using JsonRequest = QObjectPtr<QIODevice>;
-using JsonResult = QJsonDocument;
-using JsonError = ::microcore::error::Error;
-using JsonJob = ::microcore::core::IJob<JsonResult, JsonError>;
+std::string Error::id() const
+{
+    return m_id;
+}
+
+QString Error::message() const
+{
+    return m_message;
+}
 
 }}
-
-#endif // MICROCORE_JSON_JSONTYPES_H

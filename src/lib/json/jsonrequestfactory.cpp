@@ -32,6 +32,7 @@
 #include "jsonrequestfactory.h"
 
 using namespace ::microcore::core;
+using namespace ::microcore::error;
 
 namespace microcore { namespace json {
 
@@ -48,7 +49,7 @@ public:
         QJsonParseError error {};
         QJsonDocument document {QJsonDocument::fromJson(ioDevice.readAll(), &error)};
         if (error.error != QJsonParseError::NoError) {
-            callback.onError(error.errorString());
+            callback.onError(Error("json", error.errorString()));
         } else {
             callback.onResult(std::move(document));
         }
