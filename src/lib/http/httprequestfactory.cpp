@@ -41,11 +41,11 @@ class HttpRequestJob: public HttpJob
 {
 public:
     explicit HttpRequestJob(QNetworkAccessManager &network, HttpRequest &&request)
-        : m_network(network)
-        , m_request(std::move(request))
+        : m_network {network}
+        , m_request {std::move(request)}
     {
     }
-    void execute(ICallback &callback) override
+    void execute(OnResult_t onResult, OnError_t onError) override
     {
         QNetworkReply *reply {nullptr};
         switch (m_request.type()) {
@@ -66,11 +66,11 @@ public:
         reply->setParent(nullptr);
         m_result.reset(reply);
 
-        QObject::connect(reply, &QNetworkReply::finished, [this, reply, &callback]() {
+        QObject::connect(reply, &QNetworkReply::finished, [this, reply, onResult, onError]() {
             if (reply->error() != QNetworkReply::NoError) {
-                callback.onError(Error("http", reply->errorString()));
+                onError(Error("http", reply->errorString()));
             } else {
-                callback.onResult(std::move(m_result));
+                onResult(std::move(m_result));
             }
         });
     }
@@ -81,7 +81,7 @@ private:
 };
 
 HttpRequestFactory::HttpRequestFactory(QNetworkAccessManager &network)
-    : m_network(network)
+    : m_network {network}
 {
 }
 

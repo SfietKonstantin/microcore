@@ -34,7 +34,7 @@
 namespace microcore { namespace http {
 
 HttpRequest::HttpRequest(Type type, QNetworkRequest request, QByteArray postData)
-    : m_type(type), m_request(std::move(request)), m_postData(std::move(postData))
+    : m_type {type}, m_request {std::move(request)}, m_postData {std::move(postData)}
 {
 }
 

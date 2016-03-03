@@ -33,6 +33,7 @@
 #define MICROCORE_CORE_IJOB_H
 
 #include <memory>
+#include <functional>
 
 namespace microcore { namespace core {
 
@@ -40,15 +41,10 @@ template<class Result, class Error>
 class IJob
 {
 public:
-    class ICallback
-    {
-    public:
-        virtual ~ICallback() {}
-        virtual void onResult(Result &&result) = 0;
-        virtual void onError(Error &&error) = 0;
-    };
+    using OnResult_t = std::function<void (Result &&)>;
+    using OnError_t = std::function<void (Error &&)>;
     virtual ~IJob() {}
-    virtual void execute(ICallback &callback) = 0;
+    virtual void execute(OnResult_t onResult, OnError_t onError) = 0;
 };
 
 }}

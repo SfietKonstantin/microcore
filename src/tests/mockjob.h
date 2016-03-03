@@ -41,25 +41,8 @@ template<class Result, class Error>
 class MockJob: public IJob<Result, Error>
 {
 public:
-    using Callback = typename IJob<Result, Error>::ICallback;
-    MOCK_METHOD1_T(execute, void (Callback &callback));
-};
-
-template<class Result, class Error>
-class MockJobCallback: public IJob<Result, Error>::ICallback
-{
-public:
-    void onResult(Result &&result)
-    {
-        mockOnResult(result);
-    }
-    MOCK_METHOD1_T(mockOnResult, void (const Result &result));
-    void onError(Error &&error)
-    {
-        mockOnError(error);
-    }
-    MOCK_METHOD1_T(mockOnError, void (const Error &error));
-
+    MOCK_METHOD2_T(execute, void (std::function<void (Result &&)> onResult,
+                                  std::function<void (Error &&)> onError));
 };
 
 }}

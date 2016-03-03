@@ -49,12 +49,25 @@ class TstHttp: public Test
 protected:
     void SetUp() override
     {
-       m_factory.reset(new HttpRequestFactory(m_network));
-       m_pipe.reset(new HttpPipe(*m_factory, m_callback));
+        using namespace std::placeholders;
+        auto onResult {std::bind(&TstHttp::onResult, this, _1)};
+        auto onError {std::bind(&TstHttp::onError, this, _1)};
+
+        m_factory.reset(new HttpRequestFactory(m_network));
+        m_pipe.reset(new HttpPipe(*m_factory, std::move(onResult), std::move(onError)));
+    }
+    MOCK_METHOD1(mockOnResult, void (const HttpResult &result));
+    void onResult(HttpResult &&result)
+    {
+        mockOnResult(result);
+    }
+    MOCK_METHOD1(mockOnError, void (const HttpError &error));
+    void onError(HttpError &&error)
+    {
+        mockOnError(error);
     }
     QNetworkAccessManager m_network {};
     std::unique_ptr<HttpRequestFactory> m_factory {};
-    MockJobCallback<HttpResult, HttpError> m_callback {};
     std::unique_ptr<HttpPipe> m_pipe {};
 };
 
@@ -62,7 +75,7 @@ TEST_F(TstHttp, TestSimpleSuccess)
 {
     // Mock
     bool called {false};
-    EXPECT_CALL(m_callback, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &) {
+    EXPECT_CALL(*this, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &) {
         called = true;
     }));
     QElapsedTimer timer {};

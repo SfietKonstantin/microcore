@@ -43,15 +43,15 @@ public:
         : m_request(std::move(request))
     {
     }
-    void execute(ICallback &callback) override
+    void execute(OnResult_t onResult, OnError_t onError) override
     {
         QIODevice &ioDevice {*m_request};
         QJsonParseError error {};
         QJsonDocument document {QJsonDocument::fromJson(ioDevice.readAll(), &error)};
         if (error.error != QJsonParseError::NoError) {
-            callback.onError(Error("json", error.errorString()));
+            onError(Error("json", error.errorString()));
         } else {
-            callback.onResult(std::move(document));
+            onResult(std::move(document));
         }
     }
 private:
