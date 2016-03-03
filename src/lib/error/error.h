@@ -41,7 +41,7 @@ class Error
 {
 public:
     explicit Error() = default;
-    Error(const std::string &id, const QString &message);
+    Error(std::string id, QString message);
     DEFAULT_COPY_DEFAULT_MOVE(Error);
     std::string id() const;
     QString message() const;
