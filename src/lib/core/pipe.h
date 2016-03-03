@@ -38,14 +38,14 @@ public:
     }
     void sendError(Error &&error)
     {
-        m_job.reset();
         m_onError(std::move(error));
+        m_job.reset();
     }
 private:
     void onResult(Result &&result)
     {
-        m_job.reset();
         m_onResult(std::move(result));
+        m_job.reset();
     }
 
     IJobFactory<Request, Result, Error> &m_factory;

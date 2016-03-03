@@ -71,20 +71,126 @@ protected:
     std::unique_ptr<HttpPipe> m_pipe {};
 };
 
-TEST_F(TstHttp, TestSimpleSuccess)
+#ifdef ENABLE_MOCK_SERVER
+
+TEST_F(TstHttp, TestGetSuccess)
 {
     // Mock
     bool called {false};
-    EXPECT_CALL(*this, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &) {
+    EXPECT_CALL(*this, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &result) {
         called = true;
+        EXPECT_EQ(result->readAll(), QByteArray("Hello world from /api/get"));
     }));
     QElapsedTimer timer {};
 
     // Test
-    m_pipe->send(HttpRequest(HttpRequest::Type::Get, QNetworkRequest(QUrl("http://www.google.fr"))));
+    m_pipe->send(HttpRequest(HttpRequest::Type::Get, QNetworkRequest(QUrl("http://localhost:8080/api/get"))));
     timer.start();
-    while (!called && !timer.hasExpired(30000)) {
+    while (!called && !timer.hasExpired(5000)) {
         QTest::qWait(300);
     }
     EXPECT_TRUE(called);
 }
+
+TEST_F(TstHttp, TestGetError)
+{
+    // Mock
+    bool called {false};
+    EXPECT_CALL(*this, mockOnError(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpError &error) {
+        called = true;
+        EXPECT_EQ(error.id(), "http");
+        EXPECT_TRUE(!error.message().isEmpty());
+        EXPECT_EQ(error.data(), QByteArray("Error from /api/geterror"));
+    }));
+    QElapsedTimer timer {};
+
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Get, QNetworkRequest(QUrl("http://localhost:8080/api/geterror"))));
+    timer.start();
+    while (!called && !timer.hasExpired(5000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
+
+TEST_F(TstHttp, TestPostSuccess)
+{
+    // Mock
+    bool called {false};
+    EXPECT_CALL(*this, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &result) {
+        called = true;
+        EXPECT_EQ(result->readAll(), QByteArray("Hello world from /api/post"));
+    }));
+    QElapsedTimer timer {};
+
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Post, QNetworkRequest(QUrl("http://localhost:8080/api/post"))));
+    timer.start();
+    while (!called && !timer.hasExpired(5000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
+
+TEST_F(TstHttp, TestPostError)
+{
+    // Mock
+    bool called {false};
+    EXPECT_CALL(*this, mockOnError(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpError &error) {
+        called = true;
+        EXPECT_EQ(error.id(), "http");
+        EXPECT_TRUE(!error.message().isEmpty());
+        EXPECT_EQ(error.data(), QByteArray("Error from /api/posterror"));
+    }));
+    QElapsedTimer timer {};
+
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Post, QNetworkRequest(QUrl("http://localhost:8080/api/posterror"))));
+    timer.start();
+    while (!called && !timer.hasExpired(5000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
+
+TEST_F(TstHttp, TestDeleteSuccess)
+{
+    // Mock
+    bool called {false};
+    EXPECT_CALL(*this, mockOnResult(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpResult &result) {
+        called = true;
+        EXPECT_EQ(result->readAll(), QByteArray("Hello world from /api/delete"));
+    }));
+    QElapsedTimer timer {};
+
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Delete, QNetworkRequest(QUrl("http://localhost:8080/api/delete"))));
+    timer.start();
+    while (!called && !timer.hasExpired(5000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
+
+TEST_F(TstHttp, TestDeleteError)
+{
+    // Mock
+    bool called {false};
+    EXPECT_CALL(*this, mockOnError(_)).Times(1).WillRepeatedly(Invoke([&called](const HttpError &error) {
+        called = true;
+        EXPECT_EQ(error.id(), "http");
+        EXPECT_TRUE(!error.message().isEmpty());
+        EXPECT_EQ(error.data(), QByteArray("Error from /api/deleteerror"));
+    }));
+    QElapsedTimer timer {};
+
+    // Test
+    m_pipe->send(HttpRequest(HttpRequest::Type::Delete, QNetworkRequest(QUrl("http://localhost:8080/api/deleteerror"))));
+    timer.start();
+    while (!called && !timer.hasExpired(5000)) {
+        QTest::qWait(300);
+    }
+    EXPECT_TRUE(called);
+}
+
+#endif // ENABLE_MOCK_SERVER

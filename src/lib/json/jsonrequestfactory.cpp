@@ -45,11 +45,11 @@ public:
     }
     void execute(OnResult_t onResult, OnError_t onError) override
     {
-        QIODevice &ioDevice {*m_request};
         QJsonParseError error {};
-        QJsonDocument document {QJsonDocument::fromJson(ioDevice.readAll(), &error)};
+        const QByteArray &data {m_request->readAll()};
+        QJsonDocument document {QJsonDocument::fromJson(data, &error)};
         if (error.error != QJsonParseError::NoError) {
-            onError(Error("json", error.errorString()));
+            onError(Error("json", error.errorString(), data));
         } else {
             onResult(std::move(document));
         }

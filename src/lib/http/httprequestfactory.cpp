@@ -68,7 +68,7 @@ public:
 
         QObject::connect(reply, &QNetworkReply::finished, [this, reply, onResult, onError]() {
             if (reply->error() != QNetworkReply::NoError) {
-                onError(Error("http", reply->errorString()));
+                onError(Error("http", reply->errorString(), reply->readAll()));
             } else {
                 onResult(std::move(m_result));
             }

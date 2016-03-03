@@ -33,8 +33,8 @@
 
 namespace microcore { namespace error {
 
-Error::Error(std::string id, QString message)
-    : m_id {std::move(id)}, m_message {std::move(message)}
+Error::Error(std::string id, QString message, QByteArray data)
+    : m_id {std::move(id)}, m_message {std::move(message)}, m_data {std::move(data)}
 {
 }
 
@@ -46,6 +46,11 @@ std::string Error::id() const
 QString Error::message() const
 {
     return m_message;
+}
+
+QByteArray Error::data() const
+{
+    return m_data;
 }
 
 }}

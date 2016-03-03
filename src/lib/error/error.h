@@ -41,13 +41,15 @@ class Error
 {
 public:
     explicit Error() = default;
-    Error(std::string id, QString message);
+    Error(std::string id, QString message, QByteArray data = QByteArray());
     DEFAULT_COPY_DEFAULT_MOVE(Error);
     std::string id() const;
     QString message() const;
+    QByteArray data() const;
 private:
     std::string m_id {};
     QString m_message {};
+    QByteArray m_data {};
 };
 
 }}
