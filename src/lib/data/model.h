@@ -205,7 +205,10 @@ public:
 
         m_error = ::microcore::error::Error();
 
-        OnResult_t onResult {std::bind(&ModelBase<Request, Data, Store>::finishAppend, this, _1)};
+        OnResult_t onResult {[this](std::vector<Data> &&data) {
+            append(std::move(data));
+            finish();
+        }};
         OnError_t onError {std::bind(&ModelBase<Request, Data, Store>::error, this, _1)};
 
         m_pipe.reset(new Pipe(m_factory, std::move(onResult), std::move(onError)));
@@ -248,11 +251,6 @@ protected:
     {
     }
 private:
-    void finishAppend(std::vector<Data> &&data)
-    {
-        append(std::move(data));
-        finish();
-    }
     using Pipe = ::microcore::core::Pipe<Request, std::vector<Data>, ::microcore::error::Error>;
     using OnResult_t = typename ::microcore::core::IJob<std::vector<Data>, ::microcore::error::Error>::OnResult_t;
     using OnError_t = typename ::microcore::core::IJob<std::vector<Data>, ::microcore::error::Error>::OnError_t;
