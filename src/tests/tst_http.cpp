@@ -43,6 +43,7 @@ using namespace ::microcore::core;
 using namespace ::microcore::http;
 
 using HttpPipe = Pipe<HttpRequest, HttpResult, HttpError>;
+using HttpJob = IJob<HttpResult, HttpError>;
 
 class TstHttp: public Test
 {
@@ -50,8 +51,8 @@ protected:
     void SetUp() override
     {
         using namespace std::placeholders;
-        auto onResult {std::bind(&TstHttp::onResult, this, _1)};
-        auto onError {std::bind(&TstHttp::onError, this, _1)};
+        HttpJob::OnResult_t onResult {std::bind(&TstHttp::onResult, this, _1)};
+        HttpJob::OnError_t onError {std::bind(&TstHttp::onError, this, _1)};
 
         m_factory.reset(new HttpRequestFactory(m_network));
         m_pipe.reset(new HttpPipe(*m_factory, std::move(onResult), std::move(onError)));

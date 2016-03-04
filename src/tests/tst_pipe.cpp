@@ -104,8 +104,8 @@ protected:
     void SetUp() override
     {
         using namespace std::placeholders;
-        auto onResult {std::bind(&TstPipe::onResult, this, _1)};
-        auto onError {std::bind(&TstPipe::onError, this, _1)};
+        CJob::OnResult_t onResult {std::bind(&TstPipe::onResult, this, _1)};
+        CJob::OnError_t onError {std::bind(&TstPipe::onError, this, _1)};
 
         m_bcPipe.reset(new BCPipe(m_bcFactory, std::move(onResult), std::move(onError)));
         m_abPipe = m_bcPipe->prepend<ResultA>(m_abFactory);
@@ -279,8 +279,8 @@ using TestOnlyMovablePipe = Pipe<TestOnlyMovable, TestOnlyMovable, TestOnlyMovab
 TEST_F(TstPipe, OnlyMovableConstructible)
 {
     TestOnlyMovableResultJobFactory factory;
-    auto onResult {IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t(testOnResult)};
-    auto onError {IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t(testOnError)};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t onResult {testOnResult};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t onError {testOnError};
 
     std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, onResult, onError)};
     std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(factory)};
@@ -293,8 +293,8 @@ TEST_F(TstPipe, OnlyMovableConstructibleWithError)
 {
     TestOnlyMovableResultJobFactory factory;
     TestOnlyMovableErrorJobFactory errorFactory;
-    auto onResult {IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t(testOnResult)};
-    auto onError {IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t(testOnError)};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t onResult {testOnResult};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t onError {testOnError};
 
     std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, onResult, onError)};
     std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(errorFactory)};

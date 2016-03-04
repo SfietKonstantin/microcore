@@ -23,16 +23,16 @@ public:
     std::unique_ptr<Pipe<T, Request, Error>> prepend(IJobFactory<T, Request, Error> &factory)
     {
         using namespace std::placeholders;
-        auto onResult {std::bind(&Pipe<Request, Result, Error>::send, this, _1)};
-        auto onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
+        OnResult_t<Request> onResult {std::bind(&Pipe<Request, Result, Error>::send, this, _1)};
+        OnError_t onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
         return std::unique_ptr<Pipe<T, Request, Error>>(new Pipe<T, Request, Error>(factory, std::move(onResult), std::move(onError)));
     }
     void send(Request &&request)
     {
         Q_ASSERT(!m_job);
         using namespace std::placeholders;
-        auto onResult {std::bind(&Pipe<Request, Result, Error>::onResult, this, _1)};
-        auto onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
+        OnResult_t<Result> onResult {std::bind(&Pipe<Request, Result, Error>::onResult, this, _1)};
+        OnError_t onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
         m_job = m_factory.create(std::move(request));
         m_job->execute(std::move(onResult), std::move(onError));
     }
@@ -42,16 +42,18 @@ public:
         m_job.reset();
     }
 private:
+    template<class T>
+    using OnResult_t = typename IJob<T, Error>::OnResult_t;
+    using OnError_t = typename IJob<Result, Error>::OnError_t;
     void onResult(Result &&result)
     {
         m_onResult(std::move(result));
         m_job.reset();
     }
-
     IJobFactory<Request, Result, Error> &m_factory;
     std::unique_ptr<IJob<Result, Error>> m_job {};
-    typename IJob<Result, Error>::OnResult_t m_onResult {};
-    typename IJob<Result, Error>::OnError_t m_onError {};
+    OnResult_t<Result> m_onResult {};
+    OnError_t m_onError {};
 };
 
 }}
