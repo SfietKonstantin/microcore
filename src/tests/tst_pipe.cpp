@@ -43,7 +43,7 @@ class ResultA
 {
 public:
     explicit ResultA() = default;
-    explicit ResultA(int v) : value(v) {}
+    explicit ResultA(int v) : value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(ResultA);
     bool operator==(const ResultA &other) const
     {
@@ -56,7 +56,7 @@ class ResultB
 {
 public:
     explicit ResultB() = default;
-    explicit ResultB(int v) : value(v) {}
+    explicit ResultB(int v) : value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(ResultB);
     bool operator==(const ResultB &other) const
     {
@@ -69,7 +69,7 @@ class ResultC
 {
 public:
     explicit ResultC() = default;
-    explicit ResultC(int v) : value(v) {}
+    explicit ResultC(int v) : value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(ResultC);
     bool operator==(const ResultC &other) const
     {
@@ -82,7 +82,7 @@ class Error
 {
 public:
     explicit Error() = default;
-    explicit Error(int v) : value(v) {}
+    explicit Error(int v) : value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(Error);
     bool operator==(const Error &other) const
     {
@@ -217,7 +217,7 @@ class TestOnlyMovable
 {
 public:
     explicit TestOnlyMovable() = default;
-    explicit TestOnlyMovable(int v) : value(v) {}
+    explicit TestOnlyMovable(int v) : value {v} {}
     DISABLE_COPY_DEFAULT_MOVE(TestOnlyMovable);
     int value {0};
 };

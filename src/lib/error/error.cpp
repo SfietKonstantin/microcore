@@ -38,6 +38,11 @@ Error::Error(std::string id, QString message, QByteArray data)
 {
 }
 
+bool Error::empty() const
+{
+    return m_id.empty() && m_message.isEmpty() && m_data.isEmpty();
+}
+
 std::string Error::id() const
 {
     return m_id;

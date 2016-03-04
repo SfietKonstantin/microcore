@@ -43,6 +43,7 @@ public:
     explicit Error() = default;
     Error(std::string id, QString message, QByteArray data = QByteArray());
     DEFAULT_COPY_DEFAULT_MOVE(Error);
+    bool empty() const;
     std::string id() const;
     QString message() const;
     QByteArray data() const;

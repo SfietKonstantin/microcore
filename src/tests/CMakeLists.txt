@@ -22,9 +22,13 @@ include_directories(
 set(${PROJECT_NAME}_SRCS
     mockjob.h
     mockjobfactory.h
+    mockdatasourcelistener.h
     tst_main.cpp
     tst_pipe.cpp
     tst_http.cpp
+    tst_datasource.cpp
+    tst_modeldata.cpp
+    tst_model.cpp
 )
 
 add_executable(${PROJECT_NAME}

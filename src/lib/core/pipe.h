@@ -11,7 +11,7 @@ template<class Request, class Result, class Error>
 class Pipe
 {
 public:
-    Pipe(IJobFactory<Request, Result, Error> &factory,
+    Pipe(const IJobFactory<Request, Result, Error> &factory,
          typename IJob<Result, Error>::OnResult_t onResult,
          typename IJob<Result, Error>::OnError_t onError)
         : m_factory {factory}
@@ -20,7 +20,7 @@ public:
     {
     }
     template<class T>
-    std::unique_ptr<Pipe<T, Request, Error>> prepend(IJobFactory<T, Request, Error> &factory)
+    std::unique_ptr<Pipe<T, Request, Error>> prepend(const IJobFactory<T, Request, Error> &factory)
     {
         using namespace std::placeholders;
         OnResult_t<Request> onResult {std::bind(&Pipe<Request, Result, Error>::send, this, _1)};
@@ -50,7 +50,7 @@ private:
         m_onResult(std::move(result));
         m_job.reset();
     }
-    IJobFactory<Request, Result, Error> &m_factory;
+    const IJobFactory<Request, Result, Error> &m_factory;
     std::unique_ptr<IJob<Result, Error>> m_job {};
     OnResult_t<Result> m_onResult {};
     OnError_t m_onError {};

@@ -31,11 +31,19 @@ set(${PROJECT_NAME}_JSON_SRCS
     json/jsonrequestfactory.cpp
 )
 
+set(${PROJECT_NAME}_DATA_SRCS
+   data/datasource.h
+   data/modeldata.h
+   data/model.h
+)
+
+
 add_library(${PROJECT_NAME} STATIC
     ${${PROJECT_NAME}_CORE_SRCS}
     ${${PROJECT_NAME}_ERROR_SRCS}
     ${${PROJECT_NAME}_HTTP_SRCS}
     ${${PROJECT_NAME}_JSON_SRCS}
+    ${${PROJECT_NAME}_DATA_SRCS}
 )
 qt5_use_modules(${PROJECT_NAME} Core Network)
 
