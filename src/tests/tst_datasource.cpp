@@ -93,7 +93,9 @@ protected:
       m_data.reset(new ResultSource(std::function<int (const Result &)>(&Result::getKey)));
       ResultSource *data = m_data.get();
       EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke([this, data]() {
-          data->removeListener(m_listener);
+          if (!m_invalidated) {
+            data->removeListener(m_listener);
+          }
       }));
       ON_CALL(m_listener, onAdd(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAdd));
       ON_CALL(m_listener, onUpdate(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
@@ -103,6 +105,7 @@ protected:
    std::unique_ptr<ResultSource> m_data {};
    NiceMock<MockResultSourceListener> m_listener {};
    ListenerData m_listenerData {};
+   bool m_invalidated {false};
 };
 
 TEST_F(TstDataSource, TestSize)
@@ -193,5 +196,6 @@ TEST_F(TstDataSource, TestListenerInvalidation)
     EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(0));
     EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
     EXPECT_TRUE(m_listenerData.invalidated);
+    m_invalidated = true;
 }
 
