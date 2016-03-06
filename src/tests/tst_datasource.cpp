@@ -36,6 +36,8 @@
 using namespace ::testing;
 using namespace ::microcore::data;
 
+namespace {
+
 class Result
 {
 public:
@@ -82,6 +84,8 @@ public:
     const Result *lastUpdated {nullptr};
 };
 
+}
+
 using ResultSource = DataSource<int, Result>;
 using MockResultSourceListener = MockDataSourceListener<int, Result>;
 
@@ -91,16 +95,17 @@ protected:
    void SetUp() override
    {
       m_data.reset(new ResultSource(std::function<int (const Result &)>(&Result::getKey)));
-      ResultSource *data = m_data.get();
-      EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke([this, data]() {
-          if (!m_invalidated) {
-            data->removeListener(m_listener);
-          }
-      }));
+      EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstDataSource *>(this), &TstDataSource::invalidateOnDestroyed));
       ON_CALL(m_listener, onAdd(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAdd));
       ON_CALL(m_listener, onUpdate(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
       ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onRemove));
       ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
+   }
+   void invalidateOnDestroyed()
+   {
+       if (!m_invalidated) {
+           m_data->removeListener(m_listener);
+       }
    }
    std::unique_ptr<ResultSource> m_data {};
    NiceMock<MockResultSourceListener> m_listener {};

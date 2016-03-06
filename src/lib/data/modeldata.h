@@ -73,13 +73,25 @@ public:
         });
         return returned;
     }
-    void remove(const Data *data)
+    bool remove(const Data *data)
     {
         auto it = m_data.find(data);
-        if (it != std::end(m_data)) {
-            m_data.erase(it);
+        if (it == std::end(m_data)) {
+            return false;
         }
+        m_data.erase(it);
+        return true;
     }
+    bool update(const Data *key, Data &&value)
+    {
+        auto it = m_data.find(key);
+        if (it == std::end(m_data)) {
+            return false;
+        }
+        *it->second = std::move(value);
+        return true;
+    }
+
 private:
     Map m_data {};
 };

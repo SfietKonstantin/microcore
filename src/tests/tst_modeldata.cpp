@@ -36,29 +36,33 @@ using namespace std::placeholders;
 using namespace ::testing;
 using namespace ::microcore::data;
 
-class ModelResult
+namespace {
+
+class Result
 {
 public:
-    explicit ModelResult() = default;
-    explicit ModelResult(int v) : value {v} {}
-    DEFAULT_COPY_DEFAULT_MOVE(ModelResult);
+    explicit Result() = default;
+    explicit Result(int v) : value {v} {}
+    DEFAULT_COPY_DEFAULT_MOVE(Result);
     int value {0};
 };
+
+}
 
 class TstModelData: public Test
 {
 protected:
-    ModelData<ModelResult> m_modelData {};
+    ModelData<Result> m_modelData {};
 };
 
-static bool getMatching(const ModelData<ModelResult>::Map::value_type &ptr, int value)
+static bool getMatching(const ModelData<Result>::Map::value_type &ptr, int value)
 {
     return ptr.first->value == value;
 }
 
-TEST_F(TstModelData, Simple)
+TEST_F(TstModelData, BaseOperations)
 {
-    std::vector<const ModelResult *> result1 {m_modelData.add({ModelResult(1), ModelResult(2)})};
+    std::vector<const Result *> result1 {m_modelData.add({Result(1), Result(2)})};
     {
         EXPECT_EQ(result1.size(), static_cast<std::size_t>(2));
         EXPECT_EQ(result1[0]->value, 1);
@@ -72,8 +76,7 @@ TEST_F(TstModelData, Simple)
         EXPECT_FALSE(it == std::end(m_modelData));
         EXPECT_EQ(result1[1], it->first);
     }
-
-    std::vector<const ModelResult *> result2 {m_modelData.add({ModelResult(3)})};
+    std::vector<const Result *> result2 {m_modelData.add({Result(3)})};
     {
         EXPECT_EQ(result2.size(), static_cast<std::size_t>(1));
         EXPECT_EQ(result2[0]->value, 3);
@@ -90,8 +93,7 @@ TEST_F(TstModelData, Simple)
         EXPECT_FALSE(it == std::end(m_modelData));
         EXPECT_EQ(result2[0], it->first);
     }
-
-    m_modelData.remove(result1[0]);
+    EXPECT_TRUE(m_modelData.remove(result1[0]));
     {
         auto it = std::find_if(std::begin(m_modelData), std::end(m_modelData), std::bind(getMatching, _1, 1));
         EXPECT_TRUE(it == std::end(m_modelData));
@@ -104,4 +106,25 @@ TEST_F(TstModelData, Simple)
         EXPECT_FALSE(it == std::end(m_modelData));
         EXPECT_EQ(result2[0], it->first);
     }
+    EXPECT_TRUE(m_modelData.update(result1[1], Result(4)));
+    {
+        auto it = std::find_if(std::begin(m_modelData), std::end(m_modelData), std::bind(getMatching, _1, 1));
+        EXPECT_TRUE(it == std::end(m_modelData));
+
+        it = std::find_if(std::begin(m_modelData), std::end(m_modelData), std::bind(getMatching, _1, 4));
+        EXPECT_FALSE(it == std::end(m_modelData));
+        EXPECT_EQ(result1[1], it->first);
+
+        it = std::find_if(std::begin(m_modelData), std::end(m_modelData), std::bind(getMatching, _1, 3));
+        EXPECT_FALSE(it == std::end(m_modelData));
+        EXPECT_EQ(result2[0], it->first);
+    }
+}
+
+TEST_F(TstModelData, InvalidOperations)
+{
+    m_modelData.add({Result(1), Result(2)});
+    EXPECT_FALSE(m_modelData.remove(nullptr));
+    EXPECT_FALSE(m_modelData.update(nullptr, Result(5)));
+
 }

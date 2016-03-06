@@ -39,6 +39,8 @@
 using namespace ::testing;
 using namespace ::microcore::core;
 
+namespace {
+
 class ResultA
 {
 public:
@@ -91,6 +93,8 @@ public:
     int value {0};
 };
 
+}
+
 using ABPipe = Pipe<ResultA, ResultB, Error>;
 using BCPipe = Pipe<ResultB, ResultC, Error>;
 using BJob = MockJob<ResultB, Error>;
@@ -126,7 +130,7 @@ protected:
     std::unique_ptr<BCPipe> m_bcPipe {};
 };
 
-TEST_F(TstPipe, TestSimpleSuccess)
+TEST_F(TstPipe, TestSuccess)
 {
     // Mock
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
@@ -153,7 +157,7 @@ TEST_F(TstPipe, TestSimpleSuccess)
     m_abPipe->send(ResultA(1));
 }
 
-TEST_F(TstPipe, TestSimpleError1)
+TEST_F(TstPipe, TestError1)
 {
     // Mock
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
@@ -180,7 +184,7 @@ TEST_F(TstPipe, TestSimpleError1)
     m_abPipe->send(ResultA(1));
 }
 
-TEST_F(TstPipe, TestSimpleError2)
+TEST_F(TstPipe, TestError2)
 {
     // Mock
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
@@ -200,7 +204,7 @@ TEST_F(TstPipe, TestSimpleError2)
     m_abPipe->send(ResultA(1));
 }
 
-TEST_F(TstPipe, TestSimpleError3)
+TEST_F(TstPipe, TestError3)
 {
     // Mock
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);

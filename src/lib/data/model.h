@@ -80,20 +80,19 @@ public:
         /**
          * @brief Notify that an item is updated
          * @param index index of the item that is updated.
-         * @param item the new value of the item.
          */
-        virtual void onUpdate(int index, const Data &item) = 0;
+        virtual void onUpdate(std::size_t index) = 0;
         /**
          * @brief Notify that an item is removed
          * @param index index of the item that is removed.
          */
-        virtual void onRemove(int index) = 0;
+        virtual void onRemove(std::size_t index) = 0;
         /**
          * @brief Notify that an item has moved
          * @param from index of the item to move.
          * @param to the item's new index.
          */
-        virtual void onMove(int from, int to) = 0;
+        virtual void onMove(std::size_t from, std::size_t to) = 0;
         /**
          * @brief Notify that the listened object is now invalid
          *
@@ -105,24 +104,24 @@ public:
          * @brief Notify that an asynchronous operation has started
          */
         virtual void onStart() = 0;
+       /**
+        * @brief Notify that an asynchronous operation has finished
+        */
+       virtual void onFinish() = 0;
         /**
          * @brief Notify that an asynchronous operation has failed
          * @param error error message.
          */
         virtual void onError(const ::microcore::error::Error &error) = 0;
-        /**
-         * @brief Notify that an asynchronous operation has finished
-         */
-        virtual void onFinish() = 0;
     };
     using List = std::deque<const Data *>;
     using Factory = ::microcore::core::IJobFactory<Request, std::vector<Data>, ::microcore::error::Error>;
     DISABLE_COPY_DEFAULT_MOVE(ModelBase);
     ~ModelBase()
     {
-        for (IListener *listener : m_listeners) {
-            listener->onInvalidation();
-        }
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IListener::onInvalidation, _1));
     }
     typename List::const_iterator begin() const
     {
@@ -156,36 +155,43 @@ public:
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IListener::onPrepend, _1, std::ref(stored)));
     }
-    void update(std::size_t index, Data &&data)
+    bool update(std::size_t index, Data &&data)
     {
         using namespace std::placeholders;
         if (index >= m_data.size()) {
-            return;
+            return false;
         }
-        *m_data[index] = std::move(data);
+        if (!m_store.update(m_data.at(index), std::move(data))) {
+            return false;
+        }
+
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onUpdate, _1, std::ref(*(m_data[index]))));
+                      std::bind(&IListener::onUpdate, _1, index));
+        return true;
     }
-    void remove(std::size_t index)
+    bool remove(std::size_t index)
     {
         using namespace std::placeholders;
         if (index >= m_data.size()) {
-            return;
+            return false;
         }
-        m_store.remove(m_data.at(index));
+        if (!m_store.remove(m_data.at(index))) {
+            return false;
+        }
         m_data.erase(std::begin(m_data) + index);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IListener::onRemove, _1, index));
+        return true;
     }
-    void move(std::size_t from, std::size_t to)
+    bool move(std::size_t from, std::size_t to)
     {
         using namespace std::placeholders;
         if (from >= m_data.size() || to > m_data.size()) {
-            return;
+            return false;
         }
 
         if (to == from || to == from + 1) {
-            return;
+            return false;
         }
 
         std::size_t toIndex = (to < from) ? to : to - 1;
@@ -195,12 +201,13 @@ public:
         m_data.insert(std::begin(m_data) + toIndex, data);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IListener::onMove, _1, from, to));
+        return true;
     }
-    void start(Request &&request)
+    bool start(Request &&request)
     {
         using namespace std::placeholders;
         if (m_pipe) {
-            return;
+            return false;
         }
 
         m_error = ::microcore::error::Error();
@@ -215,6 +222,7 @@ public:
         m_pipe->send(std::move(request));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IListener::onStart, _1));
+        return true;
     }
     void error(::microcore::error::Error &&error)
     {
@@ -235,6 +243,10 @@ public:
     void addListener(IListener &listener)
     {
         m_listeners.insert(&listener);
+        if (!m_data.empty()) {
+            listener.onAppend(std::vector<const Data *>(m_data.begin(), m_data.end()));
+        }
+
         if (m_pipe) {
             listener.onStart();
         } else if (!m_error.empty()){
