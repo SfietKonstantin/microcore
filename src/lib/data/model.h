@@ -42,92 +42,83 @@
 namespace microcore { namespace data {
 
 /**
+ * @brief An interface for a Model listener
+ *
+ * This interface is used to implement models-like classes, that listens to a
+ * Model and want to be notified when the Model changes.
+ *
+ * This listener can be used to get notifications when some items are inserted,
+ * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
+ * onRemove().
+ *
+ * This interface also handle the status of the asynchronous loading operation
+ * that takes places in the Model. This is done via onStart(), onError() and
+ * onFinished().
+ */
+template<class Model>
+class IModelListener
+{
+public:
+     virtual ~IModelListener() {}
+     /**
+      * @brief Notify that new items are appended
+      * @param items items to be appended.
+      */
+     virtual void onAppend(const std::vector<typename Model::Content_t> &items) = 0;
+     /**
+      * @brief Notify that new items are prepended
+      * @param items items to be prepended.
+      */
+     virtual void onPrepend(const std::vector<typename Model::Content_t> &items) = 0;
+     /**
+      * @brief Notify that an item is updated
+      * @param index index of the item that is updated.
+      */
+     virtual void onUpdate(std::size_t index) = 0;
+     /**
+      * @brief Notify that an item is removed
+      * @param index index of the item that is removed.
+      */
+     virtual void onRemove(std::size_t index) = 0;
+     /**
+      * @brief Notify that an item has moved
+      * @param from index of the item to move.
+      * @param to the item's new index.
+      */
+     virtual void onMove(std::size_t from, std::size_t to) = 0;
+     /**
+      * @brief Notify that the listened object is now invalid
+      *
+      * When called on this method, the listener should stop
+      * listening.
+      */
+     virtual void onInvalidation() = 0;
+ };
+
+/**
  * @brief A generic container
  */
-template<class Request, class Data, class Store>
+template<class Data, class Store>
 class ModelBase
 {
 public:
-
-   /**
-    * @brief An interface for a Model listener
-    *
-    * This interface is used to implement models-like classes, that listens to a
-    * Model and want to be notified when the Model changes.
-    *
-    * This listener can be used to get notifications when some items are inserted,
-    * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
-    * onRemove().
-    *
-    * This interface also handle the status of the asynchronous loading operation
-    * that takes places in the Model. This is done via onStart(), onError() and
-    * onFinished().
-    */
-   class IListener
-   {
-   public:
-        virtual ~IListener() {}
-        /**
-         * @brief Notify that new items are appended
-         * @param items items to be appended.
-         */
-        virtual void onAppend(const std::vector<const Data *> &items) = 0;
-        /**
-         * @brief Notify that new items are prepended
-         * @param items items to be prepended.
-         */
-        virtual void onPrepend(const std::vector<const Data *> &items) = 0;
-        /**
-         * @brief Notify that an item is updated
-         * @param index index of the item that is updated.
-         */
-        virtual void onUpdate(std::size_t index) = 0;
-        /**
-         * @brief Notify that an item is removed
-         * @param index index of the item that is removed.
-         */
-        virtual void onRemove(std::size_t index) = 0;
-        /**
-         * @brief Notify that an item has moved
-         * @param from index of the item to move.
-         * @param to the item's new index.
-         */
-        virtual void onMove(std::size_t from, std::size_t to) = 0;
-        /**
-         * @brief Notify that the listened object is now invalid
-         *
-         * When called on this method, the listener should stop
-         * listening.
-         */
-        virtual void onInvalidation() = 0;
-        /**
-         * @brief Notify that an asynchronous operation has started
-         */
-        virtual void onStart() = 0;
-       /**
-        * @brief Notify that an asynchronous operation has finished
-        */
-       virtual void onFinish() = 0;
-        /**
-         * @brief Notify that an asynchronous operation has failed
-         * @param error error message.
-         */
-        virtual void onError(const ::microcore::error::Error &error) = 0;
-    };
-    using List = std::deque<const Data *>;
-    using Factory = ::microcore::core::IJobFactory<Request, std::vector<Data>, ::microcore::error::Error>;
+    using Data_t = Data;
+    using Content_t = const Data *;
+    using Container_t = std::deque<Content_t>;
+    using Source_t = std::vector<Data_t>;
+    using Listener_t = IModelListener<ModelBase<Data, Store>>;
     DISABLE_COPY_DEFAULT_MOVE(ModelBase);
-    ~ModelBase()
+    virtual ~ModelBase()
     {
         using namespace std::placeholders;
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onInvalidation, _1));
+                      std::bind(&Listener_t::onInvalidation, _1));
     }
-    typename List::const_iterator begin() const
+    typename Container_t::const_iterator begin() const
     {
         return std::begin(m_data);
     }
-    typename List::const_iterator end() const
+    typename Container_t::const_iterator end() const
     {
         return std::end(m_data);
     }
@@ -139,21 +130,21 @@ public:
     {
         return m_data.size();
     }
-    void append(std::vector<Data> &&data)
+    void append(Source_t &&data)
     {
         using namespace std::placeholders;
-        const std::vector<const Data *> &stored = m_store.add(std::move(data));
+        const std::vector<Content_t> &stored = m_store.add(std::move(data));
         m_data.insert(std::end(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onAppend, _1, std::ref(stored)));
+                      std::bind(&Listener_t::onAppend, _1, std::ref(stored)));
     }
-    void prepend(std::vector<Data> &&data)
+    void prepend(Source_t &&data)
     {
         using namespace std::placeholders;
-        const std::vector<const Data *> &stored = m_store.add(std::move(data));
+        const std::vector<Content_t> &stored = m_store.add(std::move(data));
         m_data.insert(std::begin(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onPrepend, _1, std::ref(stored)));
+                      std::bind(&Listener_t::onPrepend, _1, std::ref(stored)));
     }
     bool update(std::size_t index, Data &&data)
     {
@@ -166,7 +157,7 @@ public:
         }
 
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onUpdate, _1, index));
+                      std::bind(&Listener_t::onUpdate, _1, index));
         return true;
     }
     bool remove(std::size_t index)
@@ -180,7 +171,7 @@ public:
         }
         m_data.erase(std::begin(m_data) + index);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onRemove, _1, index));
+                      std::bind(&Listener_t::onRemove, _1, index));
         return true;
     }
     bool move(std::size_t from, std::size_t to)
@@ -196,92 +187,41 @@ public:
 
         std::size_t toIndex = (to < from) ? to : to - 1;
 
-        const Data *data {*(std::begin(m_data) + from)};
+        Content_t data {*(std::begin(m_data) + from)};
         m_data.erase(std::begin(m_data) + from);
         m_data.insert(std::begin(m_data) + toIndex, data);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onMove, _1, from, to));
+                      std::bind(&Listener_t::onMove, _1, from, to));
         return true;
     }
-    bool start(Request &&request)
-    {
-        using namespace std::placeholders;
-        if (m_pipe) {
-            return false;
-        }
-
-        m_error = ::microcore::error::Error();
-
-        OnResult_t onResult {[this](std::vector<Data> &&data) {
-            append(std::move(data));
-            finish();
-        }};
-        OnError_t onError {std::bind(&ModelBase<Request, Data, Store>::error, this, _1)};
-
-        m_pipe.reset(new Pipe(m_factory, std::move(onResult), std::move(onError)));
-        m_pipe->send(std::move(request));
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onStart, _1));
-        return true;
-    }
-    void error(::microcore::error::Error &&error)
-    {
-        using namespace std::placeholders;
-        m_pipe.reset();
-        m_error = std::move(error);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onError, _1, std::ref(m_error)));
-    }
-    void finish()
-    {
-        using namespace std::placeholders;
-        m_pipe.reset();
-        m_error = ::microcore::error::Error();
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onFinish, _1));
-    }
-    void addListener(IListener &listener)
+    void addListener(Listener_t &listener)
     {
         m_listeners.insert(&listener);
         if (!m_data.empty()) {
-            listener.onAppend(std::vector<const Data *>(m_data.begin(), m_data.end()));
-        }
-
-        if (m_pipe) {
-            listener.onStart();
-        } else if (!m_error.empty()){
-            listener.onError(m_error);
+            listener.onAppend(std::vector<Content_t>(m_data.begin(), m_data.end()));
         }
     }
-    void removeListener(IListener &listener)
+    void removeListener(Listener_t &listener)
     {
         m_listeners.erase(&listener);
     }
 protected:
-    explicit ModelBase(const Factory &factory, Store &&store)
-        : m_store(std::move(store)), m_factory(factory)
+    explicit ModelBase(Store &&store)
+        : m_store(std::move(store))
     {
     }
 private:
-    using Pipe = ::microcore::core::Pipe<Request, std::vector<Data>, ::microcore::error::Error>;
-    using OnResult_t = typename ::microcore::core::IJob<std::vector<Data>, ::microcore::error::Error>::OnResult_t;
-    using OnError_t = typename ::microcore::core::IJob<std::vector<Data>, ::microcore::error::Error>::OnError_t;
-
     Store m_store {};
-    std::deque<const Data *> m_data {};
-    const Factory &m_factory;
-    std::set<IListener *> m_listeners {};
-
-    std::unique_ptr<Pipe>  m_pipe {};
-    ::microcore::error::Error m_error {};
+    std::deque<Content_t> m_data {};
+    std::set<Listener_t *> m_listeners {};
 };
 
-template<class Request, class Data>
-class Model : public ModelBase<Request, Data, ModelData<Data>>
+template<class Data>
+class Model : public ModelBase<Data, ModelData<Data>>
 {
 public:
-    explicit Model(const typename ModelBase<Request, Data, ModelData<Data>>::Factory &factory)
-        : ModelBase<Request, Data, ModelData<Data>>(factory, ModelData<Data>())
+    explicit Model()
+        : ModelBase<Data, ModelData<Data>>(ModelData<Data>())
     {
     }
 };

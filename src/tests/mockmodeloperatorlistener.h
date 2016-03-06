@@ -29,26 +29,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_MOCKJOBFACTORY_H
-#define MICROCORE_CORE_MOCKJOBFACTORY_H
+#ifndef MICROCORE_DATA_MOCKMODELOPERATORLISTENER_H
+#define MICROCORE_DATA_MOCKMODELOPERATORLISTENER_H
 
 #include <gmock/gmock.h>
-#include "core/ijobfactory.h"
+#include "data/modeloperator.h"
 
-namespace microcore { namespace core {
+namespace microcore { namespace data {
 
-template<class Request, class Result, class Error>
-class MockJobFactory: public IJobFactory<Request, Result, Error>
+template<class Model, class Request, class Error>
+class MockModelAppenderListener: public ModelAppender<Model, Request, Error>::Listener_t
 {
 public:
-    using Job_t = IJob<Result, Error>;
-    std::unique_ptr<Job_t> create(Request &&request) const override
+    ~MockModelAppenderListener()
     {
-        return mockCreate(request);
+        onDestroyed();
     }
-    MOCK_CONST_METHOD1_T(mockCreate, std::unique_ptr<Job_t> (const Request &request));
+    MOCK_METHOD0_T(onDestroyed, void ());
+    MOCK_METHOD0_T(onAppendStart, void ());
+    MOCK_METHOD0_T(onAppendFinish, void ());
+    MOCK_METHOD1_T(onAppendError, void (const Error &error));
+    MOCK_METHOD0_T(onAppendInvalidation, void ());
 };
 
 }}
 
-#endif // MICROCORE_CORE_MOCKJOBFACTORY_H
+#endif // MICROCORE_DATA_MOCKMODELOPERATORLISTENER_H

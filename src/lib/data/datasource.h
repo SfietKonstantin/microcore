@@ -42,6 +42,17 @@
 
 namespace microcore { namespace data {
 
+template<class DataSource>
+class IDataSourceListener
+{
+public:
+    virtual ~IDataSourceListener() {}
+    virtual void onAdd(typename DataSource::Content_t data) = 0;
+    virtual void onUpdate(typename DataSource::Content_t data) = 0;
+    virtual void onRemove(typename DataSource::Content_t data) = 0;
+    virtual void onInvalidation() = 0;
+};
+
 /**
  * @brief A generic container
  */
@@ -49,16 +60,10 @@ template<class K, class V>
 class DataSource
 {
 public:
-    class IListener
-    {
-    public:
-        virtual ~IListener() {}
-        virtual void onAdd(const V &data) = 0;
-        virtual void onUpdate(const V &data) = 0;
-        virtual void onRemove(const V &data) = 0;
-        virtual void onInvalidation() = 0;
-    };
-    using GetKeyFunction_t = std::function<K (const V &)>;
+    using Data_t = V;
+    using Content_t = const Data_t &;
+    using GetKeyFunction_t = std::function<K (const Data_t &)>;
+    using Listener_t = IDataSourceListener<DataSource<K, V>>;
     explicit DataSource(GetKeyFunction_t &&getKeyFunction)
         : m_getKeyFunction {std::move(getKeyFunction)}
     {
@@ -68,7 +73,7 @@ public:
     ~DataSource()
     {
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::function<void (IListener *)>(&IListener::onInvalidation));
+                      std::function<void (Listener_t *)>(&Listener_t::onInvalidation));
     }
     bool empty() const
     {
@@ -78,7 +83,7 @@ public:
     {
         return m_data.size();
     }
-    const V & add(V &&data)
+    const Data_t & add(Data_t &&data)
     {
         using namespace std::placeholders;
         const K &key = m_getKeyFunction(data);
@@ -86,53 +91,54 @@ public:
 
         if (it != m_data.end()) {
             // Update the already added data
-            V &value = *(it->second);
+            Data_t &value = *(it->second);
             value = std::move(data);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onUpdate, _1, std::ref(value)));
+                          std::bind(&Listener_t::onUpdate, _1, std::ref(value)));
             return value;
         } else {
-            auto result = m_data.emplace(key, std::unique_ptr<V>(new V(std::move(data))));
+            auto result = m_data.emplace(key, Storage_t(new Data_t(std::move(data))));
             Q_ASSERT(result.second); // Should be added
-            V &value = *(result.first->second);
+            Data_t &value = *(result.first->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onAdd, _1, std::ref(value)));
+                          std::bind(&Listener_t::onAdd, _1, std::ref(value)));
             return value;
         }
     }
-    void remove(const V &data)
+    void remove(const Data_t &data)
     {
         using namespace std::placeholders;
         const K &key = m_getKeyFunction(data);
         auto it = m_data.find(key);
 
         if (it != m_data.end()) {
-            V &value = *(it->second);
+            Data_t &value = *(it->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onRemove, _1, std::ref(value)));
+                          std::bind(&Listener_t::onRemove, _1, std::ref(value)));
             m_data.erase(it);
         }
     }
-    void addListener(IListener &listener)
+    void addListener(Listener_t &listener)
     {
         using namespace std::placeholders;
-        std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename DataMap_t::value_type &it) {
+        std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename Container_t::value_type &it) {
             listener.onAdd(*(it.second));
         });
         m_listeners.insert(&listener);
     }
-    void removeListener(IListener &listener)
+    void removeListener(Listener_t &listener)
     {
         m_listeners.erase(&listener);
     }
 private:
-    using DataMap_t = std::map<K, std::unique_ptr<V>>;
+    using Storage_t = std::unique_ptr<Data_t>;
+    using Container_t = std::map<K, Storage_t>;
     GetKeyFunction_t m_getKeyFunction {};
-    DataMap_t m_data {};
-    std::set<IListener *> m_listeners {};
+    Container_t m_data {};
+    std::set<Listener_t *> m_listeners {};
 };
 
 }}

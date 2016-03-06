@@ -37,8 +37,8 @@
 
 namespace microcore { namespace data {
 
-template<class Request, class Data, class Store>
-class MockModelListener: public ModelBase<Request, Data, Store>::IListener
+template<class Data, class Store>
+class MockModelListener: public ModelBase<Data, Store>::Listener_t
 {
 public:
     ~MockModelListener()
@@ -52,9 +52,6 @@ public:
     MOCK_METHOD1_T(onRemove, void (std::size_t index));
     MOCK_METHOD2_T(onMove, void (std::size_t from, std::size_t to));
     MOCK_METHOD0_T(onInvalidation, void ());
-    MOCK_METHOD0_T(onStart, void ());
-    MOCK_METHOD1_T(onError, void (const ::microcore::error::Error &error));
-    MOCK_METHOD0_T(onFinish, void ());
 };
 
 }}

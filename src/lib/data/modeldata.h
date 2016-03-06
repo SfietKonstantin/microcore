@@ -45,17 +45,17 @@ template<class Data>
 class ModelData
 {
 public:
-    using DataPtr = std::unique_ptr<Data>;
-    using Map = std::map<const Data *, DataPtr>;
+    using Content_t = std::unique_ptr<Data>;
+    using Container_t = std::map<const Data *, Content_t>;
     explicit ModelData()
     {
     }
     DISABLE_COPY_DEFAULT_MOVE(ModelData);
-    typename Map::const_iterator begin() const
+    typename Container_t::const_iterator begin() const
     {
         return std::begin(m_data);
     }
-    typename Map::const_iterator end() const
+    typename Container_t::const_iterator end() const
     {
         return std::end(m_data);
     }
@@ -93,7 +93,7 @@ public:
     }
 
 private:
-    Map m_data {};
+    Container_t m_data {};
 };
 
 }}

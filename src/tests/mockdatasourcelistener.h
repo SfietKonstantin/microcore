@@ -38,7 +38,7 @@
 namespace microcore { namespace data {
 
 template<class K, class V>
-class MockDataSourceListener: public DataSource<K, V>::IListener
+class MockDataSourceListener: public DataSource<K, V>::Listener_t
 {
 public:
     ~MockDataSourceListener()

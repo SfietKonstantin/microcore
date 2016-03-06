@@ -30,6 +30,7 @@ set(${PROJECT_NAME}_SRCS
     tst_datasource.cpp
     tst_modeldata.cpp
     tst_model.cpp
+    tst_modeloperator.cpp
 )
 
 add_executable(${PROJECT_NAME}

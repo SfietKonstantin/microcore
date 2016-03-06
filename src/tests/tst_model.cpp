@@ -31,8 +31,6 @@
 
 #include <gtest/gtest.h>
 #include "data/model.h"
-#include "mockjob.h"
-#include "mockjobfactory.h"
 #include "mockmodellistener.h"
 
 using namespace std::placeholders;
@@ -63,10 +61,7 @@ public:
         Remove,
         Update,
         Move,
-        Invalidation,
-        Start,
-        Finish,
-        Error
+        Invalidation
     };
     explicit ListenerData() = default;
     void onAppend(const std::vector<const Result *> &items)
@@ -105,27 +100,10 @@ public:
         clear();
         currentType = Type::Invalidation;
     }
-    void onStart()
-    {
-        clear();
-        currentType = Type::Start;
-    }
-    void onFinish()
-    {
-        clear();
-        currentType = Type::Finish;
-    }
-    void onError(const Error &error)
-    {
-        clear();
-        currentType = Type::Error;
-        currentError = std::move(error);
-    }
     Type currentType {Type::None};
     std::vector<const Result *> currentItems {};
     int currentIndex {-1};
     int currentIndex2 {-1};
-    Error currentError {};
 private:
     void clear()
     {
@@ -133,22 +111,20 @@ private:
         currentItems.clear();
         currentIndex = -1;
         currentIndex2 = -1;
-        currentError = Error();
     }
 };
 
 }
 
-using TestModel = Model<int, Result>;
-using MockTestModelListener = MockModelListener<int, Result, ModelData<Result>>;
-using Job = MockJob<std::vector<Result>, Error>;
+using TestModel = Model<Result>;
+using MockTestModelListener = MockModelListener<Result, ModelData<Result>>;
 
 class TstModel: public Test
 {
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel(m_factory));
+        m_model.reset(new TestModel());
         EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModel *>(this), &TstModel::invalidateOnDestroyed));
         ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAppend));
         ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onPrepend));
@@ -156,9 +132,6 @@ protected:
         ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onRemove));
         ON_CALL(m_listener, onMove(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onMove));
         ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
-        ON_CALL(m_listener, onStart()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onStart));
-        ON_CALL(m_listener, onFinish()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onFinish));
-        ON_CALL(m_listener, onError(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onError));
     }
     void invalidateOnDestroyed()
     {
@@ -166,12 +139,9 @@ protected:
             m_model->removeListener(m_listener);
         }
     }
-    NiceMock<MockJobFactory<int, std::vector<Result>, Error>> m_factory {};
     std::unique_ptr<TestModel> m_model {};
     NiceMock<MockTestModelListener> m_listener {};
     ListenerData m_listenerData {};
-    Job::OnResult_t m_onResult {};
-    Job::OnError_t m_onError {};
     bool m_invalidated {false};
 };
 
@@ -331,18 +301,18 @@ public:
     }
 };
 
-class InvalidModel: public ModelBase<int, Result, MockStore<Result>>
+class InvalidModel: public ModelBase<Result, MockStore<Result>>
 {
 public:
-    explicit InvalidModel(const InvalidModel::Factory &factory)
-        : ModelBase<int, Result, MockStore<Result>>(factory, MockStore<Result>())
+    explicit InvalidModel()
+        : ModelBase<Result, MockStore<Result>>(MockStore<Result>())
     {
     }
 };
 
 TEST_F(TstModel, InvalidOperations2)
 {
-    InvalidModel model (m_factory);
+    InvalidModel model {};
     model.append({Result(1), Result(2)});
     EXPECT_FALSE(model.update(0, Result(3)));
     EXPECT_FALSE(model.remove(0));
@@ -534,115 +504,4 @@ TEST_F(TstModel, TestListenerInvalidation)
     m_model.reset();
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Invalidation);
     m_invalidated = true;
-}
-
-TEST_F(TstModel, TestSuccess)
-{
-    // Mock
-    EXPECT_CALL(m_factory, mockCreate(_)).Times(0);
-    EXPECT_CALL(m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
-        std::unique_ptr<Job> returned (new Job);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](Job::OnResult_t onResult, Job::OnError_t onError) {
-            m_onResult = onResult;
-            m_onError = onError;
-        }));
-        return returned;
-    }));
-    m_model->addListener(m_listener);
-
-    // Test
-    EXPECT_TRUE(m_model->start(1));
-
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
-    EXPECT_TRUE(m_model->empty());
-    m_onResult({Result(1), Result(2)});
-
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Finish);
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
-
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-}
-
-TEST_F(TstModel, TestError)
-{
-    // Mock
-    EXPECT_CALL(m_factory, mockCreate(_)).Times(0);
-    EXPECT_CALL(m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
-        std::unique_ptr<Job> returned (new Job);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](Job::OnResult_t onResult, Job::OnError_t onError) {
-            m_onResult = onResult;
-            m_onError = onError;
-        }));
-        return returned;
-    }));
-    m_model->addListener(m_listener);
-
-    // Test
-    EXPECT_TRUE(m_model->start(1));
-
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
-    EXPECT_TRUE(m_model->empty());
-    m_onError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
-
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_listenerData.currentError.id(), "test");
-    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
-
-    EXPECT_TRUE(m_model->empty());
-}
-
-TEST_F(TstModel, TestBusy)
-{
-    // Mock
-    ON_CALL(m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
-        std::unique_ptr<Job> returned (new Job);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](Job::OnResult_t onResult, Job::OnError_t onError) {
-            m_onResult = onResult;
-            m_onError = onError;
-        }));
-        return returned;
-    }));
-
-    // Test
-    EXPECT_TRUE(m_model->start(1));
-    EXPECT_FALSE(m_model->start(2));
-    m_onResult({Result(1), Result(2)});
-    EXPECT_TRUE(m_model->start(3));
-}
-
-TEST_F(TstModel, TestListenerDelayAddStart)
-{
-    // Mock
-    ON_CALL(m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
-        std::unique_ptr<Job> returned (new Job);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](Job::OnResult_t onResult, Job::OnError_t onError) {
-            m_onResult = onResult;
-            m_onError = onError;
-        }));
-        return returned;
-    }));
-
-    // Test
-    EXPECT_TRUE(m_model->start(1));
-    m_model->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
-}
-
-TEST_F(TstModel, TestListenerDelayAddError)
-{
-    m_model->error(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
-    m_model->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_listenerData.currentError.id(), "test");
-    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
 }

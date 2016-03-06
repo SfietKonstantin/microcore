@@ -55,7 +55,7 @@ protected:
     ModelData<Result> m_modelData {};
 };
 
-static bool getMatching(const ModelData<Result>::Map::value_type &ptr, int value)
+static bool getMatching(const ModelData<Result>::Container_t::value_type &ptr, int value)
 {
     return ptr.first->value == value;
 }
