@@ -33,7 +33,6 @@
 #include "data/model.h"
 #include "mockmodellistener.h"
 
-using namespace std::placeholders;
 using namespace ::testing;
 using namespace ::microcore::core;
 using namespace ::microcore::data;
