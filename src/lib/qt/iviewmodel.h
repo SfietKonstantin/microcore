@@ -29,31 +29,49 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MOCKMODELLISTENER_H
-#define MICROCORE_DATA_MOCKMODELLISTENER_H
+#ifndef MICROCORE_QT_IVIEWMODEL_H
+#define MICROCORE_QT_IVIEWMODEL_H
 
-#include <gmock/gmock.h>
-#include "data/model.h"
+#include <QtCore/QAbstractListModel>
+#include <QtQml/QQmlParserStatus>
+#include "core/globals.h"
 
-namespace microcore { namespace data {
+namespace microcore { namespace qt {
 
-template<class Data, class Store, class Model>
-class MockModelListener: public ModelBase<Data, Store, Model>::Listener_t
+class IViewModel : public QAbstractListModel, public QQmlParserStatus
 {
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
+    Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
+    Q_PROPERTY(Status status READ status NOTIFY statusChanged)
+    Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
+    Q_ENUMS(Status)
 public:
-    ~MockModelListener()
+    enum Status
     {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD1_T(onAppend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD1_T(onPrepend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD2_T(onUpdate, void (std::size_t index, typename Model::NotificationItem_t item));
-    MOCK_METHOD1_T(onRemove, void (std::size_t index));
-    MOCK_METHOD2_T(onMove, void (std::size_t from, std::size_t to));
-    MOCK_METHOD0_T(onInvalidation, void ());
+        Idle,
+        Loading,
+        Error
+    };
+    DISABLE_COPY_DISABLE_MOVE(IViewModel);
+    virtual ~IViewModel() {}
+    virtual QObject * controller() const = 0;
+    virtual void setController(QObject *controller) = 0;
+    virtual int count() const = 0;
+    virtual Status status() const = 0;
+    virtual QString errorMessage() const = 0;
+Q_SIGNALS:
+    void controllerChanged();
+    void countChanged();
+    void statusChanged();
+    void errorMessageChanged();
+    void finished();
+    void error();
+protected:
+    explicit IViewModel(QObject *parent = 0) : QAbstractListModel(parent), QQmlParserStatus() {}
 };
 
 }}
 
-#endif // MICROCORE_DATA_MOCKMODELLISTENER_H
+#endif // MICROCORE_QT_IVIEWMODEL_H

@@ -29,29 +29,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_IJOBFACTORY_H
-#define MICROCORE_CORE_IJOBFACTORY_H
+#ifndef MICROCORE_QT_VIEWMODELCONTROLLER_HPP
+#define MICROCORE_QT_VIEWMODELCONTROLLER_HPP
 
-#include "ijob.h"
+#include "iviewmodelcontroller.h"
+#include "data/modeloperator.h"
 
-namespace microcore { namespace core {
+namespace microcore { namespace qt {
 
-template<class Request, class Result, class Error>
-class IJobFactory
+template<class Model>
+class ViewModelController: public IViewModelController
 {
 public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create(Request &&request) const = 0;
-};
-
-template<class Result, class Error>
-class IJobFactory<void, Result, Error>
-{
-public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create() const = 0;
+    explicit ViewModelController(QObject *parent = nullptr)
+        : IViewModelController(parent)
+    {
+    }
+    virtual Model & model() = 0;
+    void classBegin() override {}
+    void componentComplete() override {}
 };
 
 }}
 
-#endif // MICROCORE_CORE_IJOBFACTORY_H
+#endif // MICROCORE_QT_VIEWMODELCONTROLLER_HPP

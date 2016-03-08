@@ -39,8 +39,10 @@ set(${PROJECT_NAME}_DATA_SRCS
 )
 
 set(${PROJECT_NAME}_QT_SRCS
-    qt/imodel.h
-    qt/model.h
+    qt/iviewmodel.h
+    qt/viewmodel.h
+    qt/iviewmodelcontroller.h
+    qt/viewmodelcontroller.h
 )
 
 add_library(${PROJECT_NAME} STATIC
@@ -51,7 +53,12 @@ add_library(${PROJECT_NAME} STATIC
     ${${PROJECT_NAME}_DATA_SRCS}
     ${${PROJECT_NAME}_QT_SRCS}
 )
-qt5_use_modules(${PROJECT_NAME} Core Network)
+qt5_use_modules(${PROJECT_NAME} Core Network Qml)
+target_link_libraries(${PROJECT_NAME}
+    Qt5::Core
+    Qt5::Network
+    Qt5::Qml
+)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     ${PROJECT_SOURCE_DIR}

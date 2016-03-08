@@ -32,9 +32,9 @@
 #ifndef MICROCORE_DATA_MODELOPERATOR_H
 #define MICROCORE_DATA_MODELOPERATOR_H
 
-#include "core/ijobfactory.h"
-#include "error/error.h"
+#include "core/pipe.h"
 #include <functional>
+#include <set>
 
 namespace microcore { namespace data {
 
@@ -45,8 +45,6 @@ template<class Model, class Request, class Result, class Error, class Operator>
 class ModelOperator
 {
 public:
-    using Data_t = typename Model::Data_t;
-    using Error_t = const Error &;
     using Factory_t = ::microcore::core::IJobFactory<Request, Result, Error>;
     using Listener_t = IModelOperatorListener<Model, Request, Error, Operator>;
     using OperatorFunction_t = std::function<void (Model &, Result &&)>;
@@ -54,10 +52,10 @@ public:
     using FinishFunction_t = std::function<void (Listener_t &)>;
     using ErrorFunction_t = std::function<void (Listener_t &, const Error &)>;
     using InvalidationFunction_t = std::function<void (Listener_t &)>;
-    ModelOperator(Model &model, const Factory_t &factory, OperatorFunction_t &&operatorFunction,
+    ModelOperator(Model &model, std::unique_ptr<Factory_t> factory, OperatorFunction_t &&operatorFunction,
                   StartFunction_t &&startFunction, FinishFunction_t &&finishFunction,
                   ErrorFunction_t &&errorFunction, InvalidationFunction_t &&invalidationFunction)
-        : m_model(model), m_factory(factory), m_operatorFunction(std::move(operatorFunction))
+        : m_model(model), m_factory(std::move(factory)), m_operatorFunction(std::move(operatorFunction))
         , m_startFunction(std::move(startFunction)), m_finishFunction(std::move(finishFunction))
         , m_errorFunction(std::move(errorFunction)), m_invalidationFunction(std::move(invalidationFunction))
     {
@@ -68,6 +66,10 @@ public:
         std::for_each(std::begin(m_listeners), std::end(m_listeners), [this](Listener_t *listener) {
             m_invalidationFunction(*listener);
         });
+    }
+    bool busy() const
+    {
+        return m_pipe;
     }
     bool start(Request &&request)
     {
@@ -84,7 +86,7 @@ public:
         }};
         OnError_t onError {std::bind(&This_t::error, this, _1)};
 
-        m_pipe.reset(new Pipe_t(m_factory, std::move(onResult), std::move(onError)));
+        m_pipe.reset(new Pipe_t(*m_factory, std::move(onResult), std::move(onError)));
         m_pipe->send(std::move(request));
         std::for_each(std::begin(m_listeners), std::end(m_listeners), [this](Listener_t *listener) {
             m_startFunction(*listener);
@@ -104,7 +106,7 @@ public:
     {
         using namespace std::placeholders;
         m_pipe.reset();
-        m_error = ::microcore::error::Error();
+        m_error = Error();
         std::for_each(std::begin(m_listeners), std::end(m_listeners), [this](Listener_t *listener) {
             m_finishFunction(*listener);
         });
@@ -130,7 +132,7 @@ private:
     using OnError_t = typename ::microcore::core::IJob<Result, Error>::OnError_t;
 
     Model &m_model;
-    const Factory_t &m_factory;
+    std::unique_ptr<Factory_t> m_factory;
     OperatorFunction_t m_operatorFunction {};
     StartFunction_t m_startFunction {};
     FinishFunction_t m_finishFunction {};
@@ -156,14 +158,14 @@ public:
 };
 
 template<class Model, class Request, class Error>
-class ModelAppender: public ModelOperator<Model, Request, std::vector<typename Model::Data_t>, Error, ModelAppender<Model, Request, Error>>
+class ModelAppender: public ModelOperator<Model, Request, typename Model::SourceItems_t, Error, ModelAppender<Model, Request, Error>>
 {
 public:
-    using Result_t = std::vector<typename Model::Data_t>;
+    using Result_t = typename Model::SourceItems_t;
     using Factory_t = ::microcore::core::IJobFactory<Request, Result_t, Error>;
     using Listener_t = IModelOperatorListener<Model, Request, Error, ModelAppender<Model, Request, Error>>;
-    ModelAppender(Model &model, const Factory_t &factory)
-        : Parent_t(model, factory, OperatorFunction_t(&Model::append),
+    ModelAppender(Model &model, std::unique_ptr<Factory_t> factory)
+        : Parent_t(model, std::move(factory), OperatorFunction_t(&Model::append),
                    StartFunction_t(&Listener_t::onAppendStart), FinishFunction_t(&Listener_t::onAppendFinish),
                    ErrorFunction_t(&Listener_t::onAppendError), InvalidationFunction_t(&Listener_t::onAppendInvalidation))
     {

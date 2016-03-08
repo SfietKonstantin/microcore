@@ -30,6 +30,7 @@
  */
 
 #include <gtest/gtest.h>
+#include "error/error.h"
 #include "data/model.h"
 #include "mockjob.h"
 #include "mockjobfactory.h"
@@ -97,18 +98,21 @@ private:
 
 }
 
-using TestModel = Model<Result>;
-using TestModelAppender = ModelAppender<TestModel, int, Error>;
-using MockTestModelAppenderListener = MockModelAppenderListener<TestModel, int, Error>;
-using AppenderJob = MockJob<TestModel::Source_t, Error>;
+using TestViewModel = Model<Result>;
+using TestModelAppender = ModelAppender<TestViewModel, int, Error>;
+using MockTestModelAppenderListener = MockModelAppenderListener<TestViewModel, int, Error>;
+using AppenderJob = MockJob<TestViewModel::SourceItems_t, Error>;
 
 class TstModeOperator: public Test
 {
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel());
-        m_appender.reset(new TestModelAppender(*m_model, m_appenderFactory));
+        std::unique_ptr<Factory_t> appenderFactory (new Factory_t());
+        m_appenderFactory = appenderFactory.get();
+
+        m_model.reset(new TestViewModel());
+        m_appender.reset(new TestModelAppender(*m_model, std::move(appenderFactory)));
         EXPECT_CALL(m_appenderListener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModeOperator *>(this), &TstModeOperator::invalidateOnDestroyed));
         ON_CALL(m_appenderListener, onAppendStart()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onStart));
         ON_CALL(m_appenderListener, onAppendFinish()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onFinish));
@@ -121,8 +125,9 @@ protected:
             m_appender->removeListener(m_appenderListener);
         }
     }
-    std::unique_ptr<TestModel> m_model {};
-    NiceMock<MockJobFactory<int, TestModel::Source_t, Error>> m_appenderFactory {};
+    using Factory_t = NiceMock<MockJobFactory<int, TestViewModel::SourceItems_t, Error>>;
+    std::unique_ptr<TestViewModel> m_model {};
+    Factory_t *m_appenderFactory {nullptr};
     std::unique_ptr<TestModelAppender> m_appender {};
     NiceMock<MockTestModelAppenderListener> m_appenderListener {};
     ListenerData m_appenderListenerData {};
@@ -134,8 +139,8 @@ protected:
 TEST_F(TstModeOperator, TestSuccess)
 {
     // Mock
-    EXPECT_CALL(m_appenderFactory, mockCreate(_)).Times(0);
-    EXPECT_CALL(m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
+    EXPECT_CALL(*m_appenderFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(*m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_appenderOnResult = onResult;
@@ -176,8 +181,8 @@ TEST_F(TstModeOperator, TestSuccess)
 TEST_F(TstModeOperator, TestError)
 {
     // Mock
-    EXPECT_CALL(m_appenderFactory, mockCreate(_)).Times(0);
-    EXPECT_CALL(m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
+    EXPECT_CALL(*m_appenderFactory, mockCreate(_)).Times(0);
+    EXPECT_CALL(*m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_appenderOnResult = onResult;
@@ -205,7 +210,7 @@ TEST_F(TstModeOperator, TestError)
 TEST_F(TstModeOperator, TestBusy)
 {
     // Mock
-    ON_CALL(m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_appenderOnResult = onResult;
@@ -224,7 +229,7 @@ TEST_F(TstModeOperator, TestBusy)
 TEST_F(TstModeOperator, TestListenerDelayAddStart)
 {
     // Mock
-    ON_CALL(m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_appenderOnResult = onResult;

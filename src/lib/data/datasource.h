@@ -35,10 +35,10 @@
 #include "core/globals.h"
 #include <set>
 #include <map>
+#include <algorithm>
 #include <functional>
 #include <memory>
 #include <QtGlobal>
-#include <algorithm>
 
 namespace microcore { namespace data {
 
@@ -47,9 +47,9 @@ class IDataSourceListener
 {
 public:
     virtual ~IDataSourceListener() {}
-    virtual void onAdd(typename DataSource::Content_t data) = 0;
-    virtual void onUpdate(typename DataSource::Content_t data) = 0;
-    virtual void onRemove(typename DataSource::Content_t data) = 0;
+    virtual void onAdd(typename DataSource::NotificationItem_t data) = 0;
+    virtual void onUpdate(typename DataSource::NotificationItem_t data) = 0;
+    virtual void onRemove(typename DataSource::NotificationItem_t data) = 0;
     virtual void onInvalidation() = 0;
 };
 
@@ -60,10 +60,11 @@ template<class K, class V>
 class DataSource
 {
 public:
-    using Data_t = V;
-    using Content_t = const Data_t &;
-    using GetKeyFunction_t = std::function<K (const Data_t &)>;
-    using Listener_t = IDataSourceListener<DataSource<K, V>>;
+    using Key_t = K;
+    using Item_t = V;
+    using NotificationItem_t = const Item_t &;
+    using GetKeyFunction_t = std::function<Key_t (const Item_t &)>;
+    using Listener_t = IDataSourceListener<DataSource<Key_t, Item_t>>;
     explicit DataSource(GetKeyFunction_t &&getKeyFunction)
         : m_getKeyFunction {std::move(getKeyFunction)}
     {
@@ -83,48 +84,48 @@ public:
     {
         return m_data.size();
     }
-    const Data_t & add(Data_t &&data)
+    const Item_t & add(Item_t &&item)
     {
         using namespace std::placeholders;
-        const K &key = m_getKeyFunction(data);
+        const Key_t &key = m_getKeyFunction(item);
         auto it = m_data.find(key);
 
         if (it != m_data.end()) {
-            // Update the already added data
-            Data_t &value = *(it->second);
-            value = std::move(data);
+            // Update the already added item
+            Item_t &newItem = *(it->second);
+            newItem = std::move(item);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onUpdate, _1, std::ref(value)));
-            return value;
+                          std::bind(&Listener_t::onUpdate, _1, std::ref(newItem)));
+            return newItem;
         } else {
-            auto result = m_data.emplace(key, Storage_t(new Data_t(std::move(data))));
+            auto result = m_data.emplace(key, StoredItem_t(new Item_t(std::move(item))));
             Q_ASSERT(result.second); // Should be added
-            Data_t &value = *(result.first->second);
+            Item_t &existingItem = *(result.first->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onAdd, _1, std::ref(value)));
-            return value;
+                          std::bind(&Listener_t::onAdd, _1, std::ref(existingItem)));
+            return existingItem;
         }
     }
-    void remove(const Data_t &data)
+    void remove(const Item_t &item)
     {
         using namespace std::placeholders;
-        const K &key = m_getKeyFunction(data);
+        const Key_t &key = m_getKeyFunction(item);
         auto it = m_data.find(key);
 
         if (it != m_data.end()) {
-            Data_t &value = *(it->second);
+            Item_t &existingItem = *(it->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onRemove, _1, std::ref(value)));
+                          std::bind(&Listener_t::onRemove, _1, std::ref(existingItem)));
             m_data.erase(it);
         }
     }
     void addListener(Listener_t &listener)
     {
         using namespace std::placeholders;
-        std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename Container_t::value_type &it) {
+        std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename Storage_t::value_type &it) {
             listener.onAdd(*(it.second));
         });
         m_listeners.insert(&listener);
@@ -134,10 +135,10 @@ public:
         m_listeners.erase(&listener);
     }
 private:
-    using Storage_t = std::unique_ptr<Data_t>;
-    using Container_t = std::map<K, Storage_t>;
+    using StoredItem_t = std::unique_ptr<Item_t>;
+    using Storage_t = std::map<Key_t, StoredItem_t>;
     GetKeyFunction_t m_getKeyFunction {};
-    Container_t m_data {};
+    Storage_t m_data {};
     std::set<Listener_t *> m_listeners {};
 };
 

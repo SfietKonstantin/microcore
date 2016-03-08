@@ -29,29 +29,27 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_IJOBFACTORY_H
-#define MICROCORE_CORE_IJOBFACTORY_H
+#ifndef MICROCORE_QT_IVIEWMODELCONTROLLER_H
+#define MICROCORE_QT_IVIEWMODELCONTROLLER_H
 
-#include "ijob.h"
+#include <QtCore/QObject>
+#include <QtQml/QQmlParserStatus>
+#include "core/globals.h"
 
-namespace microcore { namespace core {
+namespace microcore { namespace qt {
 
-template<class Request, class Result, class Error>
-class IJobFactory
+class IViewModel;
+class IViewModelController: public QObject, public QQmlParserStatus
 {
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
 public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create(Request &&request) const = 0;
-};
-
-template<class Result, class Error>
-class IJobFactory<void, Result, Error>
-{
-public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create() const = 0;
+    DISABLE_COPY_DISABLE_MOVE(IViewModelController);
+    virtual ~IViewModelController() {}
+protected:
+    explicit IViewModelController(QObject *parent = 0) : QObject(parent), QQmlParserStatus() {}
 };
 
 }}
 
-#endif // MICROCORE_CORE_IJOBFACTORY_H
+#endif // MICROCORE_QT_IVIEWMODELCONTROLLER_H

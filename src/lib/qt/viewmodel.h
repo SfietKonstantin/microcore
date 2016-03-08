@@ -29,23 +29,24 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_QT_MODEL_H
-#define MICROCORE_QT_MODEL_H
+#ifndef MICROCORE_QT_VIEWMODEL_H
+#define MICROCORE_QT_VIEWMODEL_H
 
-#include "imodel.h"
+#include "iviewmodel.h"
+#include "viewmodelcontroller.h"
 #include "core/qobjectptr.h"
 #include "data/model.h"
 
 namespace microcore { namespace qt {
 
-template<class Data, class DataObject>
-class Model: public IModel, public ::microcore::data::IModelListener< ::microcore::data::Model<Data>>
+template<class Model, class DataObject>
+class ViewModel: public IViewModel, public ::microcore::data::IModelListener<Model>
 {
 public:
-    ~Model()
+    ~ViewModel()
     {
-        if (m_model != nullptr) {
-            m_model->removeListener(*this);
+        if (m_controller != nullptr) {
+            m_controller->model().removeListener(*this);
         }
     }
     void classBegin() override
@@ -61,6 +62,25 @@ public:
         Q_UNUSED(parent)
         return m_items.size();
     }
+    QObject * controller() const override
+    {
+        return m_controller;
+    }
+    void setController(QObject *controllerObject)
+    {
+        Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);
+        if (m_controller != controller) {
+            if (m_controller) {
+                m_controller->model().removeListener(*this);
+            }
+            m_controller = controller;
+            if (m_controller) {
+                m_controller->model().addListener(*this);
+            }
+            Q_EMIT controllerChanged();
+            refreshData();
+        }
+    }
     int count() const override
     {
         return rowCount();
@@ -73,34 +93,25 @@ public:
     {
         return m_errorMessage;
     }
-public Q_SLOTS:
-    void startMove() override
-    {
-    }
-    void move(int from, int to) override
-    {
-    }
-    void endMove()
-    {
-    }
 protected:
     using Content_t = QObjectPtr<DataObject>;
-    explicit Model(QObject *parent = 0)
-        : IModel(parent)
+    explicit ViewModel(QObject *parent = 0)
+        : IViewModel(parent)
     {
     }
     std::deque<Content_t> m_items {};
 private:
-    void onAppend(const std::vector<const Data *> &items) override
+    using Controller_t = ViewModelController<Model>;
+    void onAppend(const typename Model::NotificationItems_t &items) override
     {
         beginInsertRows(QModelIndex(), rowCount(), rowCount() + items.size() - 1);
-        for (const Data *entry : items) {
-            m_items.emplace_back(DataObject::create(*entry, this));
+        for (typename Model::NotificationItem_t item : items) {
+            m_items.emplace_back(DataObject::create(*item, this));
         }
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onPrepend(const std::vector<const Data *> &items) override
+    void onPrepend(const typename Model::NotificationItems_t &items) override
     {
         beginInsertRows(QModelIndex(), 0, items.size() - 1);
         for (auto it = items.rbegin(); it != items.rend(); ++it) {
@@ -109,7 +120,7 @@ private:
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onUpdate(std::size_t index, const Data *item) override
+    void onUpdate(std::size_t index, typename Model::NotificationItem_t item) override
     {
         int indexInt = static_cast<int>(index);
         if (indexInt >= rowCount()) {
@@ -137,7 +148,7 @@ private:
     }
     void onInvalidation() override
     {
-        m_model = nullptr;
+        m_controller = nullptr;
     }
     void refreshData()
     {
@@ -146,8 +157,9 @@ private:
         }
 
         std::deque<Content_t> newItems;
-        if (m_model != nullptr) {
-            std::for_each(std::begin(m_model), std::end(m_model), [&newItems, this](const Data *item) {
+        if (m_controller != nullptr) {
+            Model &model = m_controller->model();
+            std::for_each(std::begin(model), std::end(model), [&newItems, this](typename Model::NotificationItem_t item) {
                 newItems.emplace_back(DataObject::create(*item, this));
             });
         }
@@ -216,11 +228,11 @@ private:
         endMoveRows();
     }
     bool m_complete {false};
+    Controller_t *m_controller {nullptr};
     Status m_status {Idle};
     QString m_errorMessage {};
-    ::microcore::data::Model<Data> *m_model {nullptr};
 };
 
 }}
 
-#endif // MICROCORE_QT_MODEL_H
+#endif // MICROCORE_QT_VIEWMODEL_H

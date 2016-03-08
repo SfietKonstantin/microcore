@@ -36,7 +36,6 @@
 using namespace ::testing;
 using namespace ::microcore::core;
 using namespace ::microcore::data;
-using namespace ::microcore::error;
 
 namespace {
 
@@ -81,8 +80,9 @@ public:
         currentType = Type::Remove;
         currentIndex = static_cast<int>(index);
     }
-    void onUpdate(std::size_t index)
+    void onUpdate(std::size_t index, const Result *item)
     {
+        Q_UNUSED(item)
         clear();
         currentType = Type::Update;
         currentIndex = static_cast<int>(index);
@@ -115,19 +115,19 @@ private:
 
 }
 
-using TestModel = Model<Result>;
-using MockTestModelListener = MockModelListener<Result, ModelData<Result>>;
+using TestViewModel = Model<Result>;
+using MockTestModelListener = MockModelListener<Result, ModelData<Result>, TestViewModel>;
 
 class TstModel: public Test
 {
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel());
+        m_model.reset(new TestViewModel());
         EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModel *>(this), &TstModel::invalidateOnDestroyed));
         ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAppend));
         ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onPrepend));
-        ON_CALL(m_listener, onUpdate(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
+        ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
         ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onRemove));
         ON_CALL(m_listener, onMove(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onMove));
         ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
@@ -138,7 +138,7 @@ protected:
             m_model->removeListener(m_listener);
         }
     }
-    std::unique_ptr<TestModel> m_model {};
+    std::unique_ptr<TestViewModel> m_model {};
     NiceMock<MockTestModelListener> m_listener {};
     ListenerData m_listenerData {};
     bool m_invalidated {false};
@@ -300,11 +300,11 @@ public:
     }
 };
 
-class InvalidModel: public ModelBase<Result, MockStore<Result>>
+class InvalidModel: public ModelBase<Result, MockStore<Result>, InvalidModel>
 {
 public:
     explicit InvalidModel()
-        : ModelBase<Result, MockStore<Result>>(MockStore<Result>())
+        : ModelBase<Result, MockStore<Result>, InvalidModel>(MockStore<Result>())
     {
     }
 };

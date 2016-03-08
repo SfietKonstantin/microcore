@@ -49,6 +49,14 @@ public:
     MOCK_CONST_METHOD1_T(mockCreate, std::unique_ptr<Job_t> (const Request &request));
 };
 
+template<class Result, class Error>
+class MockJobFactory<void, Result, Error>: public IJobFactory<void, Result, Error>
+{
+public:
+    using Job_t = IJob<Result, Error>;
+    MOCK_CONST_METHOD0_T(create, std::unique_ptr<Job_t> ());
+};
+
 }}
 
 #endif // MICROCORE_CORE_MOCKJOBFACTORY_H

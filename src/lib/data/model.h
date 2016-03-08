@@ -33,9 +33,7 @@
 #define MICROCORE_DATA_MODEL_H
 
 #include "modeldata.h"
-#include "core/ijobfactory.h"
 #include "core/pipe.h"
-#include "error/error.h"
 #include <set>
 #include <deque>
 
@@ -50,10 +48,6 @@ namespace microcore { namespace data {
  * This listener can be used to get notifications when some items are inserted,
  * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
  * onRemove().
- *
- * This interface also handle the status of the asynchronous loading operation
- * that takes places in the Model. This is done via onStart(), onError() and
- * onFinished().
  */
 template<class Model>
 class IModelListener
@@ -64,17 +58,17 @@ public:
       * @brief Notify that new items are appended
       * @param items items to be appended.
       */
-     virtual void onAppend(const std::vector<typename Model::Content_t> &items) = 0;
+     virtual void onAppend(const typename Model::NotificationItems_t &items) = 0;
      /**
       * @brief Notify that new items are prepended
       * @param items items to be prepended.
       */
-     virtual void onPrepend(const std::vector<typename Model::Content_t> &items) = 0;
+     virtual void onPrepend(const typename Model::NotificationItems_t &items) = 0;
      /**
       * @brief Notify that an item is updated
       * @param index index of the item that is updated.
       */
-     virtual void onUpdate(std::size_t index) = 0;
+     virtual void onUpdate(std::size_t index, typename Model::NotificationItem_t item) = 0;
      /**
       * @brief Notify that an item is removed
       * @param index index of the item that is removed.
@@ -98,15 +92,17 @@ public:
 /**
  * @brief A generic container
  */
-template<class Data, class Store>
+template<class Data, class Store, class Model>
 class ModelBase
 {
 public:
-    using Data_t = Data;
-    using Content_t = const Data *;
-    using Container_t = std::deque<Content_t>;
-    using Source_t = std::vector<Data_t>;
-    using Listener_t = IModelListener<ModelBase<Data, Store>>;
+    using Item_t = Data;
+    using NotificationItem_t = const Data *;
+    using NotificationItems_t = std::vector<NotificationItem_t>;
+    using StoredItem_t = const Data *;
+    using Storage_t = std::deque<StoredItem_t>;
+    using SourceItems_t = std::vector<Item_t>;
+    using Listener_t = IModelListener<Model>;
     DISABLE_COPY_DEFAULT_MOVE(ModelBase);
     virtual ~ModelBase()
     {
@@ -114,11 +110,11 @@ public:
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&Listener_t::onInvalidation, _1));
     }
-    typename Container_t::const_iterator begin() const
+    typename Storage_t::const_iterator begin() const
     {
         return std::begin(m_data);
     }
-    typename Container_t::const_iterator end() const
+    typename Storage_t::const_iterator end() const
     {
         return std::end(m_data);
     }
@@ -130,34 +126,34 @@ public:
     {
         return m_data.size();
     }
-    void append(Source_t &&data)
+    void append(SourceItems_t &&items)
     {
         using namespace std::placeholders;
-        const std::vector<Content_t> &stored = m_store.add(std::move(data));
+        const NotificationItems_t &stored = m_store.add(std::move(items));
         m_data.insert(std::end(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&Listener_t::onAppend, _1, std::ref(stored)));
     }
-    void prepend(Source_t &&data)
+    void prepend(SourceItems_t &&items)
     {
         using namespace std::placeholders;
-        const std::vector<Content_t> &stored = m_store.add(std::move(data));
+        const NotificationItems_t &stored = m_store.add(std::move(items));
         m_data.insert(std::begin(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&Listener_t::onPrepend, _1, std::ref(stored)));
     }
-    bool update(std::size_t index, Data &&data)
+    bool update(std::size_t index, Item_t &&item)
     {
         using namespace std::placeholders;
         if (index >= m_data.size()) {
             return false;
         }
-        if (!m_store.update(m_data.at(index), std::move(data))) {
+        if (!m_store.update(m_data.at(index), std::move(item))) {
             return false;
         }
 
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onUpdate, _1, index));
+                      std::bind(&Listener_t::onUpdate, _1, index, m_data.at(index)));
         return true;
     }
     bool remove(std::size_t index)
@@ -187,7 +183,7 @@ public:
 
         std::size_t toIndex = (to < from) ? to : to - 1;
 
-        Content_t data {*(std::begin(m_data) + from)};
+        StoredItem_t data {*(std::begin(m_data) + from)};
         m_data.erase(std::begin(m_data) + from);
         m_data.insert(std::begin(m_data) + toIndex, data);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
@@ -198,7 +194,7 @@ public:
     {
         m_listeners.insert(&listener);
         if (!m_data.empty()) {
-            listener.onAppend(std::vector<Content_t>(m_data.begin(), m_data.end()));
+            listener.onAppend(NotificationItems_t(m_data.begin(), m_data.end()));
         }
     }
     void removeListener(Listener_t &listener)
@@ -212,16 +208,16 @@ protected:
     }
 private:
     Store m_store {};
-    std::deque<Content_t> m_data {};
+    Storage_t m_data {};
     std::set<Listener_t *> m_listeners {};
 };
 
 template<class Data>
-class Model : public ModelBase<Data, ModelData<Data>>
+class Model : public ModelBase<Data, ModelData<Data>, Model<Data>>
 {
 public:
     explicit Model()
-        : ModelBase<Data, ModelData<Data>>(ModelData<Data>())
+        : ModelBase<Data, ModelData<Data>, Model<Data>>(ModelData<Data>())
     {
     }
 };

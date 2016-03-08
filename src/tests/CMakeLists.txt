@@ -19,6 +19,24 @@ include_directories(
     ${gmock_SOURCE_DIR}/include
 )
 
+set(${PROJECT_NAME}_INCLUDES
+    includes/tst_core_globals.cpp
+    includes/tst_core_ijob.cpp
+    includes/tst_core_ijobfactory.cpp
+    includes/tst_core_pipe.cpp
+    includes/tst_core_qobjectptr.cpp
+    includes/tst_data_datasource.cpp
+    includes/tst_data_model.cpp
+    includes/tst_data_modeldata.cpp
+    includes/tst_data_modeloperator.cpp
+    includes/tst_http_httptypes.cpp
+    includes/tst_json_jsontypes.cpp
+    includes/tst_qt_iviewmodel.cpp
+    includes/tst_qt_viewmodel.cpp
+    includes/tst_qt_iviewmodelcontroller.cpp
+    includes/tst_qt_viewmodelcontroller.cpp
+)
+
 set(${PROJECT_NAME}_SRCS
     mockjob.h
     mockjobfactory.h
@@ -31,16 +49,15 @@ set(${PROJECT_NAME}_SRCS
     tst_modeldata.cpp
     tst_model.cpp
     tst_modeloperator.cpp
-    tst_qtmodel.cpp
+    tst_qtviewmodel.cpp
 )
 
 add_executable(${PROJECT_NAME}
+    ${${PROJECT_NAME}_INCLUDES}
     ${${PROJECT_NAME}_SRCS}
 )
-qt5_use_modules(${PROJECT_NAME} Core Network Test)
+qt5_use_modules(${PROJECT_NAME} Core Network Qml Test)
 target_link_libraries(${PROJECT_NAME}
-    Qt5::Core
-    Qt5::Network
     Qt5::Test
     gtest
     gmock

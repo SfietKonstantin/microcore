@@ -45,27 +45,31 @@ template<class Data>
 class ModelData
 {
 public:
-    using Content_t = std::unique_ptr<Data>;
-    using Container_t = std::map<const Data *, Content_t>;
+    using Key_t = const Data *;
+    using Item_t = Data;
+    using StoredItem_t = std::unique_ptr<Data>;
+    using Storage_t = std::map<Key_t, StoredItem_t>;
+    using SourceItems_t = std::vector<Item_t>;
+    using OutputItems_t = std::vector<Key_t>;
     explicit ModelData()
     {
     }
     DISABLE_COPY_DEFAULT_MOVE(ModelData);
-    typename Container_t::const_iterator begin() const
+    typename Storage_t::const_iterator begin() const
     {
         return std::begin(m_data);
     }
-    typename Container_t::const_iterator end() const
+    typename Storage_t::const_iterator end() const
     {
         return std::end(m_data);
     }
-    std::vector<const Data *> add(std::vector<Data> &&data)
+    OutputItems_t add(SourceItems_t &&data)
     {
-        typename std::vector<const Data *> returned (data.size(), nullptr);
-        typename std::vector<const Data *>::iterator it = std::begin(returned);
-        std::for_each(std::begin(data), std::end(data), [this, &it](Data &item) {
-            std::unique_ptr<Data> data {new Data(item)};
-            Data *key = data.get();
+        OutputItems_t returned (data.size(), nullptr);
+        typename OutputItems_t::iterator it = std::begin(returned);
+        std::for_each(std::begin(data), std::end(data), [this, &it](const Item_t &item) {
+            StoredItem_t data {new Data(item)};
+            Key_t key = data.get();
             auto result = m_data.emplace(key, std::move(data));
             Q_ASSERT(result.second); // Should be added
             *it = result.first->first;
@@ -73,16 +77,16 @@ public:
         });
         return returned;
     }
-    bool remove(const Data *data)
+    bool remove(Key_t item)
     {
-        auto it = m_data.find(data);
+        auto it = m_data.find(item);
         if (it == std::end(m_data)) {
             return false;
         }
         m_data.erase(it);
         return true;
     }
-    bool update(const Data *key, Data &&value)
+    bool update(Key_t key, Item_t &&value)
     {
         auto it = m_data.find(key);
         if (it == std::end(m_data)) {
@@ -93,7 +97,7 @@ public:
     }
 
 private:
-    Container_t m_data {};
+    Storage_t m_data {};
 };
 
 }}

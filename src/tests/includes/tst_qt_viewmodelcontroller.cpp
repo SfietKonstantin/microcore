@@ -29,31 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MOCKMODELLISTENER_H
-#define MICROCORE_DATA_MOCKMODELLISTENER_H
-
-#include <gmock/gmock.h>
-#include "data/model.h"
-
-namespace microcore { namespace data {
-
-template<class Data, class Store, class Model>
-class MockModelListener: public ModelBase<Data, Store, Model>::Listener_t
-{
-public:
-    ~MockModelListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD1_T(onAppend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD1_T(onPrepend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD2_T(onUpdate, void (std::size_t index, typename Model::NotificationItem_t item));
-    MOCK_METHOD1_T(onRemove, void (std::size_t index));
-    MOCK_METHOD2_T(onMove, void (std::size_t from, std::size_t to));
-    MOCK_METHOD0_T(onInvalidation, void ());
-};
-
-}}
-
-#endif // MICROCORE_DATA_MOCKMODELLISTENER_H
+#include "qt/viewmodelcontroller.h"
