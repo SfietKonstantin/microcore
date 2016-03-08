@@ -14,6 +14,7 @@ set(${PROJECT_NAME}_CORE_SRCS
     core/ijob.h
     core/ijobfactory.h
     core/pipe.h
+    core/executor.h
 )
 
 set(${PROJECT_NAME}_ERROR_SRCS

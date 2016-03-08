@@ -36,7 +36,7 @@ using namespace ::microcore::error;
 
 namespace microcore { namespace json {
 
-class JsonRequestJob: public JsonJob
+class JsonRequestJob final : public JsonJob
 {
 public:
     explicit JsonRequestJob(JsonRequest &&request)

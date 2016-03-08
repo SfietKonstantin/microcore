@@ -44,30 +44,15 @@ class IViewModel : public QAbstractListModel, public QQmlParserStatus
     Q_INTERFACES(QQmlParserStatus)
     Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)
-    Q_PROPERTY(Status status READ status NOTIFY statusChanged)
-    Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
-    Q_ENUMS(Status)
 public:
-    enum Status
-    {
-        Idle,
-        Loading,
-        Error
-    };
     DISABLE_COPY_DISABLE_MOVE(IViewModel);
     virtual ~IViewModel() {}
     virtual QObject * controller() const = 0;
     virtual void setController(QObject *controller) = 0;
     virtual int count() const = 0;
-    virtual Status status() const = 0;
-    virtual QString errorMessage() const = 0;
 Q_SIGNALS:
     void controllerChanged();
     void countChanged();
-    void statusChanged();
-    void errorMessageChanged();
-    void finished();
-    void error();
 protected:
     explicit IViewModel(QObject *parent = 0) : QAbstractListModel(parent), QQmlParserStatus() {}
 };

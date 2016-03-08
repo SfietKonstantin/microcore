@@ -38,7 +38,7 @@
 namespace microcore { namespace data {
 
 template<class K, class V>
-class MockDataSourceListener: public DataSource<K, V>::Listener_t
+class MockDataSourceListener: public DataSource<K, V>::IListener
 {
 public:
     ~MockDataSourceListener()
@@ -46,10 +46,10 @@ public:
         onDestroyed();
     }
     MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD1_T(onAdd, void (const V &data));
-    MOCK_METHOD1_T(onUpdate, void (const V &data));
-    MOCK_METHOD1_T(onRemove, void (const V &data));
-    MOCK_METHOD0_T(onInvalidation, void ());
+    MOCK_METHOD1_T(onAdd, void (typename DataSource<K, V>::NotificationItem_t data));
+    MOCK_METHOD1_T(onUpdate, void (typename DataSource<K, V>::NotificationItem_t data));
+    MOCK_METHOD1_T(onRemove, void (typename DataSource<K, V>::NotificationItem_t data));
+    MOCK_METHOD1_T(onInvalidation, void (DataSource<K, V> &source));
 };
 
 }}

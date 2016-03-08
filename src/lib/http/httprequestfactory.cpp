@@ -37,7 +37,7 @@ using namespace ::microcore::error;
 
 namespace microcore { namespace http {
 
-class HttpRequestJob: public HttpJob
+class HttpRequestJob final : public HttpJob
 {
 public:
     explicit HttpRequestJob(QNetworkAccessManager &network, HttpRequest &&request)

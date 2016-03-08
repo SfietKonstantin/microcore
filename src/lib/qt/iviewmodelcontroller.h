@@ -43,9 +43,25 @@ class IViewModelController: public QObject, public QQmlParserStatus
 {
     Q_OBJECT
     Q_INTERFACES(QQmlParserStatus)
+    Q_PROPERTY(Status status READ status NOTIFY statusChanged)
+    Q_PROPERTY(QString errorMessage READ errorMessage NOTIFY errorMessageChanged)
+    Q_ENUMS(Status)
 public:
+    enum Status
+    {
+        Idle,
+        Busy,
+        Error
+    };
     DISABLE_COPY_DISABLE_MOVE(IViewModelController);
     virtual ~IViewModelController() {}
+    virtual Status status() const = 0;
+    virtual QString errorMessage() const = 0;
+Q_SIGNALS:
+    void statusChanged();
+    void errorMessageChanged();
+    void finished();
+    void error();
 protected:
     explicit IViewModelController(QObject *parent = 0) : QObject(parent), QQmlParserStatus() {}
 };

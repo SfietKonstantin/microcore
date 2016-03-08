@@ -48,7 +48,7 @@ using HttpJob = IJob<HttpResult, HttpError>;
 class TstHttp: public Test
 {
 protected:
-    void SetUp() override
+    void SetUp() override final
     {
         using namespace std::placeholders;
         HttpJob::OnResult_t onResult {std::bind(&TstHttp::onResult, this, _1)};

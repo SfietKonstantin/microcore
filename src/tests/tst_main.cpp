@@ -34,7 +34,7 @@
 #include <QLoggingCategory>
 
 // Wrapper object used to wrap gtest around the Qt event loop
-class WrapperObject: public QObject
+class WrapperObject final : public QObject
 {
 public:
     explicit WrapperObject(int &argc, char **argv)

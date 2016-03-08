@@ -105,7 +105,7 @@ using BCFactory = MockJobFactory<ResultB, ResultC, Error>;
 class TstPipe: public Test
 {
 protected:
-    void SetUp() override
+    void SetUp() override final
     {
         using namespace std::placeholders;
         CJob::OnResult_t onResult {std::bind(&TstPipe::onResult, this, _1)};
@@ -229,7 +229,7 @@ public:
 static void testOnResult(TestOnlyMovable &&) {}
 static void testOnError(TestOnlyMovable &&) {}
 
-class TestOnlyMovableResultJob: public IJob<TestOnlyMovable, TestOnlyMovable>
+class TestOnlyMovableResultJob final : public IJob<TestOnlyMovable, TestOnlyMovable>
 {
 public:
     TestOnlyMovableResultJob(TestOnlyMovable &&result)
@@ -244,7 +244,7 @@ private:
     TestOnlyMovable m_result {};
 };
 
-class TestOnlyMovableResultJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
+class TestOnlyMovableResultJobFactory final : public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
 {
 public:
     std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>> create(TestOnlyMovable &&request) const override
@@ -253,7 +253,7 @@ public:
     }
 };
 
-class TestOnlyMovableErrorJob: public IJob<TestOnlyMovable, TestOnlyMovable>
+class TestOnlyMovableErrorJob final : public IJob<TestOnlyMovable, TestOnlyMovable>
 {
 public:
     TestOnlyMovableErrorJob(TestOnlyMovable &&error)
@@ -268,7 +268,7 @@ private:
     TestOnlyMovable m_error {};
 };
 
-class TestOnlyMovableErrorJobFactory: public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
+class TestOnlyMovableErrorJobFactory final : public IJobFactory<TestOnlyMovable, TestOnlyMovable, TestOnlyMovable>
 {
 public:
     std::unique_ptr<IJob<TestOnlyMovable, TestOnlyMovable>> create(TestOnlyMovable &&request) const override

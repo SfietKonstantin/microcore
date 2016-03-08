@@ -42,17 +42,6 @@
 
 namespace microcore { namespace data {
 
-template<class DataSource>
-class IDataSourceListener
-{
-public:
-    virtual ~IDataSourceListener() {}
-    virtual void onAdd(typename DataSource::NotificationItem_t data) = 0;
-    virtual void onUpdate(typename DataSource::NotificationItem_t data) = 0;
-    virtual void onRemove(typename DataSource::NotificationItem_t data) = 0;
-    virtual void onInvalidation() = 0;
-};
-
 /**
  * @brief A generic container
  */
@@ -64,7 +53,15 @@ public:
     using Item_t = V;
     using NotificationItem_t = const Item_t &;
     using GetKeyFunction_t = std::function<Key_t (const Item_t &)>;
-    using Listener_t = IDataSourceListener<DataSource<Key_t, Item_t>>;
+    class IListener
+    {
+    public:
+        virtual ~IListener() {}
+        virtual void onAdd(typename DataSource::NotificationItem_t data) = 0;
+        virtual void onUpdate(typename DataSource::NotificationItem_t data) = 0;
+        virtual void onRemove(typename DataSource::NotificationItem_t data) = 0;
+        virtual void onInvalidation(DataSource<K, V> &source) = 0;
+    };
     explicit DataSource(GetKeyFunction_t &&getKeyFunction)
         : m_getKeyFunction {std::move(getKeyFunction)}
     {
@@ -73,8 +70,9 @@ public:
     DISABLE_COPY_DEFAULT_MOVE(DataSource);
     ~DataSource()
     {
+        using namespace std::placeholders;
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::function<void (Listener_t *)>(&Listener_t::onInvalidation));
+                      std::bind(&IListener::onInvalidation, _1, std::ref(*this)));
     }
     bool empty() const
     {
@@ -96,7 +94,7 @@ public:
             newItem = std::move(item);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onUpdate, _1, std::ref(newItem)));
+                          std::bind(&IListener::onUpdate, _1, std::ref(newItem)));
             return newItem;
         } else {
             auto result = m_data.emplace(key, StoredItem_t(new Item_t(std::move(item))));
@@ -104,7 +102,7 @@ public:
             Item_t &existingItem = *(result.first->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onAdd, _1, std::ref(existingItem)));
+                          std::bind(&IListener::onAdd, _1, std::ref(existingItem)));
             return existingItem;
         }
     }
@@ -118,11 +116,11 @@ public:
             Item_t &existingItem = *(it->second);
 
             std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&Listener_t::onRemove, _1, std::ref(existingItem)));
+                          std::bind(&IListener::onRemove, _1, std::ref(existingItem)));
             m_data.erase(it);
         }
     }
-    void addListener(Listener_t &listener)
+    void addListener(IListener &listener)
     {
         using namespace std::placeholders;
         std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename Storage_t::value_type &it) {
@@ -130,7 +128,7 @@ public:
         });
         m_listeners.insert(&listener);
     }
-    void removeListener(Listener_t &listener)
+    void removeListener(IListener &listener)
     {
         m_listeners.erase(&listener);
     }
@@ -139,7 +137,7 @@ private:
     using Storage_t = std::map<Key_t, StoredItem_t>;
     GetKeyFunction_t m_getKeyFunction {};
     Storage_t m_data {};
-    std::set<Listener_t *> m_listeners {};
+    std::set<IListener *> m_listeners {};
 };
 
 }}

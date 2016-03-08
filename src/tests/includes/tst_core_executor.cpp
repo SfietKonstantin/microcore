@@ -29,23 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_JSON_JSONREQUESTFACTORY_H
-#define MICROCORE_JSON_JSONREQUESTFACTORY_H
-
-#include "core/globals.h"
-#include "core/ijobfactory.h"
-#include "jsontypes.h"
-
-namespace microcore { namespace json {
-
-class JsonRequestFactory final : public ::microcore::core::IJobFactory<JsonRequest, JsonResult, JsonError>
-{
-public:
-    explicit JsonRequestFactory() = default;
-    DISABLE_COPY_DISABLE_MOVE(JsonRequestFactory);
-    std::unique_ptr<JsonJob> create(JsonRequest &&request) const override;
-};
-
-}}
-
-#endif // MICROCORE_JSON_JSONREQUESTFACTORY_H
+#include "core/executor.h"

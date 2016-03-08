@@ -29,23 +29,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_JSON_JSONREQUESTFACTORY_H
-#define MICROCORE_JSON_JSONREQUESTFACTORY_H
+#ifndef MICROCORE_CORE_MOCKEXECUTORLISTENER_H
+#define MICROCORE_CORE_MOCKEXECUTORLISTENER_H
 
-#include "core/globals.h"
-#include "core/ijobfactory.h"
-#include "jsontypes.h"
+#include <gmock/gmock.h>
+#include "core/executor.h"
 
-namespace microcore { namespace json {
+namespace microcore { namespace core {
 
-class JsonRequestFactory final : public ::microcore::core::IJobFactory<JsonRequest, JsonResult, JsonError>
+template<class Error>
+class MockExecutorListener: public Executor<Error>::IListener
 {
 public:
-    explicit JsonRequestFactory() = default;
-    DISABLE_COPY_DISABLE_MOVE(JsonRequestFactory);
-    std::unique_ptr<JsonJob> create(JsonRequest &&request) const override;
+    ~MockExecutorListener()
+    {
+        onDestroyed();
+    }
+    MOCK_METHOD0_T(onDestroyed, void ());
+    MOCK_METHOD0_T(onStart, void ());
+    MOCK_METHOD0_T(onFinish, void ());
+    MOCK_METHOD1_T(onError, void (const Error &error));
+    MOCK_METHOD1_T(onInvalidation, void (Executor<Error> &error));
 };
 
 }}
 
-#endif // MICROCORE_JSON_JSONREQUESTFACTORY_H
+#endif // MICROCORE_CORE_MOCKEXECUTORLISTENER_H

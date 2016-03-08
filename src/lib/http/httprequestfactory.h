@@ -40,7 +40,7 @@
 
 namespace microcore { namespace http {
 
-class HttpRequestFactory: public ::microcore::core::IJobFactory<HttpRequest, HttpResult, HttpError>
+class HttpRequestFactory final : public ::microcore::core::IJobFactory<HttpRequest, HttpResult, HttpError>
 {
 public:
     explicit HttpRequestFactory(QNetworkAccessManager &network);

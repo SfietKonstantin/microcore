@@ -40,59 +40,9 @@
 namespace microcore { namespace data {
 
 /**
- * @brief An interface for a Model listener
- *
- * This interface is used to implement models-like classes, that listens to a
- * Model and want to be notified when the Model changes.
- *
- * This listener can be used to get notifications when some items are inserted,
- * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
- * onRemove().
- */
-template<class Model>
-class IModelListener
-{
-public:
-     virtual ~IModelListener() {}
-     /**
-      * @brief Notify that new items are appended
-      * @param items items to be appended.
-      */
-     virtual void onAppend(const typename Model::NotificationItems_t &items) = 0;
-     /**
-      * @brief Notify that new items are prepended
-      * @param items items to be prepended.
-      */
-     virtual void onPrepend(const typename Model::NotificationItems_t &items) = 0;
-     /**
-      * @brief Notify that an item is updated
-      * @param index index of the item that is updated.
-      */
-     virtual void onUpdate(std::size_t index, typename Model::NotificationItem_t item) = 0;
-     /**
-      * @brief Notify that an item is removed
-      * @param index index of the item that is removed.
-      */
-     virtual void onRemove(std::size_t index) = 0;
-     /**
-      * @brief Notify that an item has moved
-      * @param from index of the item to move.
-      * @param to the item's new index.
-      */
-     virtual void onMove(std::size_t from, std::size_t to) = 0;
-     /**
-      * @brief Notify that the listened object is now invalid
-      *
-      * When called on this method, the listener should stop
-      * listening.
-      */
-     virtual void onInvalidation() = 0;
- };
-
-/**
  * @brief A generic container
  */
-template<class Data, class Store, class Model>
+template<class Data, class Store>
 class ModelBase
 {
 public:
@@ -102,13 +52,60 @@ public:
     using StoredItem_t = const Data *;
     using Storage_t = std::deque<StoredItem_t>;
     using SourceItems_t = std::vector<Item_t>;
-    using Listener_t = IModelListener<Model>;
+    /**
+     * @brief An interface for a Model listener
+     *
+     * This interface is used to implement models-like classes, that listens to a
+     * Model and want to be notified when the Model changes.
+     *
+     * This listener can be used to get notifications when some items are inserted,
+     * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
+     * onRemove().
+     */
+    class IListener
+    {
+    public:
+         virtual ~IListener() {}
+         /**
+          * @brief Notify that new items are appended
+          * @param items items to be appended.
+          */
+         virtual void onAppend(const NotificationItems_t &items) = 0;
+         /**
+          * @brief Notify that new items are prepended
+          * @param items items to be prepended.
+          */
+         virtual void onPrepend(const NotificationItems_t &items) = 0;
+         /**
+          * @brief Notify that an item is updated
+          * @param index index of the item that is updated.
+          */
+         virtual void onUpdate(std::size_t index, NotificationItem_t item) = 0;
+         /**
+          * @brief Notify that an item is removed
+          * @param index index of the item that is removed.
+          */
+         virtual void onRemove(std::size_t index) = 0;
+         /**
+          * @brief Notify that an item has moved
+          * @param from index of the item to move.
+          * @param to the item's new index.
+          */
+         virtual void onMove(std::size_t from, std::size_t to) = 0;
+         /**
+          * @brief Notify that the listened object is now invalid
+          *
+          * When called on this method, the listener should stop
+          * listening.
+          */
+         virtual void onInvalidation() = 0;
+    };
     DISABLE_COPY_DEFAULT_MOVE(ModelBase);
     virtual ~ModelBase()
     {
         using namespace std::placeholders;
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onInvalidation, _1));
+                      std::bind(&IListener::onInvalidation, _1));
     }
     typename Storage_t::const_iterator begin() const
     {
@@ -132,7 +129,7 @@ public:
         const NotificationItems_t &stored = m_store.add(std::move(items));
         m_data.insert(std::end(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onAppend, _1, std::ref(stored)));
+                      std::bind(&IListener::onAppend, _1, std::ref(stored)));
     }
     void prepend(SourceItems_t &&items)
     {
@@ -140,7 +137,7 @@ public:
         const NotificationItems_t &stored = m_store.add(std::move(items));
         m_data.insert(std::begin(m_data), std::begin(stored), std::end(stored));
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onPrepend, _1, std::ref(stored)));
+                      std::bind(&IListener::onPrepend, _1, std::ref(stored)));
     }
     bool update(std::size_t index, Item_t &&item)
     {
@@ -153,7 +150,7 @@ public:
         }
 
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onUpdate, _1, index, m_data.at(index)));
+                      std::bind(&IListener::onUpdate, _1, index, m_data.at(index)));
         return true;
     }
     bool remove(std::size_t index)
@@ -167,7 +164,7 @@ public:
         }
         m_data.erase(std::begin(m_data) + index);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onRemove, _1, index));
+                      std::bind(&IListener::onRemove, _1, index));
         return true;
     }
     bool move(std::size_t from, std::size_t to)
@@ -187,17 +184,17 @@ public:
         m_data.erase(std::begin(m_data) + from);
         m_data.insert(std::begin(m_data) + toIndex, data);
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&Listener_t::onMove, _1, from, to));
+                      std::bind(&IListener::onMove, _1, from, to));
         return true;
     }
-    void addListener(Listener_t &listener)
+    void addListener(IListener &listener)
     {
         m_listeners.insert(&listener);
         if (!m_data.empty()) {
             listener.onAppend(NotificationItems_t(m_data.begin(), m_data.end()));
         }
     }
-    void removeListener(Listener_t &listener)
+    void removeListener(IListener &listener)
     {
         m_listeners.erase(&listener);
     }
@@ -209,15 +206,15 @@ protected:
 private:
     Store m_store {};
     Storage_t m_data {};
-    std::set<Listener_t *> m_listeners {};
+    std::set<IListener *> m_listeners {};
 };
 
 template<class Data>
-class Model : public ModelBase<Data, ModelData<Data>, Model<Data>>
+class Model : public ModelBase<Data, ModelData<Data>>
 {
 public:
     explicit Model()
-        : ModelBase<Data, ModelData<Data>, Model<Data>>(ModelData<Data>())
+        : ModelBase<Data, ModelData<Data>>(ModelData<Data>())
     {
     }
 };

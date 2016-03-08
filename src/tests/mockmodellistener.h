@@ -37,8 +37,8 @@
 
 namespace microcore { namespace data {
 
-template<class Data, class Store, class Model>
-class MockModelListener: public ModelBase<Data, Store, Model>::Listener_t
+template<class Data, class Store>
+class MockModelListener: public ModelBase<Data, Store>::IListener
 {
 public:
     ~MockModelListener()
@@ -46,9 +46,9 @@ public:
         onDestroyed();
     }
     MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD1_T(onAppend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD1_T(onPrepend, void (const typename Model::NotificationItems_t &items));
-    MOCK_METHOD2_T(onUpdate, void (std::size_t index, typename Model::NotificationItem_t item));
+    MOCK_METHOD1_T(onAppend, void (const typename ModelBase<Data, Store>::NotificationItems_t &items));
+    MOCK_METHOD1_T(onPrepend, void (const typename ModelBase<Data, Store>::NotificationItems_t &items));
+    MOCK_METHOD2_T(onUpdate, void (std::size_t index, typename ModelBase<Data, Store>::NotificationItem_t item));
     MOCK_METHOD1_T(onRemove, void (std::size_t index));
     MOCK_METHOD2_T(onMove, void (std::size_t from, std::size_t to));
     MOCK_METHOD0_T(onInvalidation, void ());

@@ -53,6 +53,15 @@ public:
     int value {0};
 };
 
+}
+
+using TestViewModel = Model<Result>;
+using TestModelAppender = ModelAppender<TestViewModel, int, Error>;
+using MockTestModelAppenderListener = MockModelAppenderListener<TestViewModel, int, Error>;
+using AppenderJob = MockJob<TestViewModel::SourceItems_t, Error>;
+
+namespace {
+
 class ListenerData
 {
 public:
@@ -81,27 +90,24 @@ public:
         currentType = Type::Error;
         currentError = std::move(error);
     }
-    void onInvalidation()
+    void onInvalidation(TestModelAppender::Executor_t &source)
     {
         clear();
         currentType = Type::Invalidation;
+        invalidatedSource = &source;
     }
-    Type currentType {Type::None};
-    Error currentError {};
-private:
     void clear()
     {
         currentType = Type::None;
         currentError = Error();
+        invalidatedSource = nullptr;
     }
+    Type currentType {Type::None};
+    Error currentError {};
+    TestModelAppender::Executor_t *invalidatedSource {nullptr};
 };
 
 }
-
-using TestViewModel = Model<Result>;
-using TestModelAppender = ModelAppender<TestViewModel, int, Error>;
-using MockTestModelAppenderListener = MockModelAppenderListener<TestViewModel, int, Error>;
-using AppenderJob = MockJob<TestViewModel::SourceItems_t, Error>;
 
 class TstModeOperator: public Test
 {
@@ -114,10 +120,10 @@ protected:
         m_model.reset(new TestViewModel());
         m_appender.reset(new TestModelAppender(*m_model, std::move(appenderFactory)));
         EXPECT_CALL(m_appenderListener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModeOperator *>(this), &TstModeOperator::invalidateOnDestroyed));
-        ON_CALL(m_appenderListener, onAppendStart()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onStart));
-        ON_CALL(m_appenderListener, onAppendFinish()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onFinish));
-        ON_CALL(m_appenderListener, onAppendError(_)).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onError));
-        ON_CALL(m_appenderListener, onAppendInvalidation()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onInvalidation));
+        ON_CALL(m_appenderListener, onStart()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onStart));
+        ON_CALL(m_appenderListener, onFinish()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onFinish));
+        ON_CALL(m_appenderListener, onError(_)).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onError));
+        ON_CALL(m_appenderListener, onInvalidation(_)).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onInvalidation));
     }
     void invalidateOnDestroyed()
     {
@@ -160,7 +166,6 @@ TEST_F(TstModeOperator, TestSuccess)
 
     EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Finish);
     {
-        EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
 
         auto it = std::begin(*m_model);
@@ -246,7 +251,19 @@ TEST_F(TstModeOperator, TestListenerDelayAddStart)
 
 TEST_F(TstModeOperator, TestListenerDelayAddError)
 {
-    m_appender->error(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
+    // Mock
+    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+        std::unique_ptr<AppenderJob> returned (new AppenderJob);
+        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+            m_appenderOnResult = onResult;
+            m_appenderOnError = onError;
+        }));
+        return returned;
+    }));
+
+    // Test
+    EXPECT_TRUE(m_appender->start(1));
+    m_appenderOnError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
     m_appender->addListener(m_appenderListener);
     EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Error);
     EXPECT_EQ(m_appenderListenerData.currentError.id(), "test");
@@ -259,7 +276,9 @@ TEST_F(TstModeOperator, TestListenerInvalidation)
     m_appender->addListener(m_appenderListener);
     EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::None);
 
+    TestModelAppender::Executor_t *oldAppender = m_appender.get();
     m_appender.reset();
     EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Invalidation);
+    EXPECT_EQ(m_appenderListenerData.invalidatedSource, oldAppender);
     m_invalidated = true;
 }

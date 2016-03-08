@@ -38,11 +38,11 @@
 namespace microcore { namespace core {
 
 template<class Request, class Result, class Error>
-class MockJobFactory: public IJobFactory<Request, Result, Error>
+class MockJobFactory : public IJobFactory<Request, Result, Error>
 {
 public:
     using Job_t = IJob<Result, Error>;
-    std::unique_ptr<Job_t> create(Request &&request) const override
+    std::unique_ptr<Job_t> create(Request &&request) const override final
     {
         return mockCreate(request);
     }

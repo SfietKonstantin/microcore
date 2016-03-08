@@ -46,10 +46,10 @@ public:
         onDestroyed();
     }
     MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD0_T(onAppendStart, void ());
-    MOCK_METHOD0_T(onAppendFinish, void ());
-    MOCK_METHOD1_T(onAppendError, void (const Error &error));
-    MOCK_METHOD0_T(onAppendInvalidation, void ());
+    MOCK_METHOD0_T(onStart, void ());
+    MOCK_METHOD0_T(onFinish, void ());
+    MOCK_METHOD1_T(onError, void (const Error &error));
+    MOCK_METHOD1_T(onInvalidation, void (typename ModelAppender<Model, Request, Error>::Executor_t &source));
 };
 
 }}

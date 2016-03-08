@@ -20,6 +20,7 @@ include_directories(
 )
 
 set(${PROJECT_NAME}_INCLUDES
+    includes/tst_core_executor.cpp
     includes/tst_core_globals.cpp
     includes/tst_core_ijob.cpp
     includes/tst_core_ijobfactory.cpp
@@ -41,8 +42,10 @@ set(${PROJECT_NAME}_SRCS
     mockjob.h
     mockjobfactory.h
     mockdatasourcelistener.h
+    mockexecutorlistener.h
     mockmodellistener.h
     tst_main.cpp
+    tst_executor.cpp
     tst_pipe.cpp
     tst_http.cpp
     tst_datasource.cpp

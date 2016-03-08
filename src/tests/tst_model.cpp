@@ -116,7 +116,7 @@ private:
 }
 
 using TestViewModel = Model<Result>;
-using MockTestModelListener = MockModelListener<Result, ModelData<Result>, TestViewModel>;
+using MockTestModelListener = MockModelListener<Result, ModelData<Result>>;
 
 class TstModel: public Test
 {
@@ -300,11 +300,11 @@ public:
     }
 };
 
-class InvalidModel: public ModelBase<Result, MockStore<Result>, InvalidModel>
+class InvalidModel final : public ModelBase<Result, MockStore<Result>>
 {
 public:
     explicit InvalidModel()
-        : ModelBase<Result, MockStore<Result>, InvalidModel>(MockStore<Result>())
+        : ModelBase<Result, MockStore<Result>>(MockStore<Result>())
     {
     }
 };

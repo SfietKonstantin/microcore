@@ -40,7 +40,7 @@
 namespace microcore { namespace qt {
 
 template<class Model, class DataObject>
-class ViewModel: public IViewModel, public ::microcore::data::IModelListener<Model>
+class ViewModel: public IViewModel, public Model::IListener
 {
 public:
     ~ViewModel()
@@ -62,11 +62,11 @@ public:
         Q_UNUSED(parent)
         return m_items.size();
     }
-    QObject * controller() const override
+    QObject * controller() const override final
     {
         return m_controller;
     }
-    void setController(QObject *controllerObject)
+    void setController(QObject *controllerObject) override final
     {
         Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);
         if (m_controller != controller) {
@@ -85,24 +85,17 @@ public:
     {
         return rowCount();
     }
-    Status status() const override
-    {
-        return m_status;
-    }
-    QString errorMessage() const override
-    {
-        return m_errorMessage;
-    }
 protected:
-    using Content_t = QObjectPtr<DataObject>;
+    using StoredItem_t = QObjectPtr<DataObject>;
+    using Storage_t = std::deque<StoredItem_t>;
     explicit ViewModel(QObject *parent = 0)
         : IViewModel(parent)
     {
     }
-    std::deque<Content_t> m_items {};
+    Storage_t m_items {};
 private:
     using Controller_t = ViewModelController<Model>;
-    void onAppend(const typename Model::NotificationItems_t &items) override
+    void onAppend(const typename Model::NotificationItems_t &items) override final
     {
         beginInsertRows(QModelIndex(), rowCount(), rowCount() + items.size() - 1);
         for (typename Model::NotificationItem_t item : items) {
@@ -111,7 +104,7 @@ private:
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onPrepend(const typename Model::NotificationItems_t &items) override
+    void onPrepend(const typename Model::NotificationItems_t &items) override final
     {
         beginInsertRows(QModelIndex(), 0, items.size() - 1);
         for (auto it = items.rbegin(); it != items.rend(); ++it) {
@@ -120,7 +113,7 @@ private:
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onUpdate(std::size_t index, typename Model::NotificationItem_t item) override
+    void onUpdate(std::size_t index, typename Model::NotificationItem_t item) override final
     {
         int indexInt = static_cast<int>(index);
         if (indexInt >= rowCount()) {
@@ -130,7 +123,7 @@ private:
         Q_EMIT dataChanged(this->index(indexInt), this->index(indexInt));
     }
 
-    void onRemove(std::size_t index) override
+    void onRemove(std::size_t index) override final
     {
         int indexInt = static_cast<int>(index);
         if (indexInt >= rowCount()) {
@@ -142,13 +135,16 @@ private:
         Q_EMIT countChanged();
         endRemoveRows();
     }
-    void onMove(std::size_t from, std::size_t to) override
+    void onMove(std::size_t from, std::size_t to) override final
     {
         performMove(from, to);
     }
-    void onInvalidation() override
+    void onInvalidation() override final
     {
-        m_controller = nullptr;
+        if (m_controller != nullptr) {
+            m_controller = nullptr;
+            Q_EMIT controllerChanged();
+        }
     }
     void refreshData()
     {
@@ -156,7 +152,7 @@ private:
             return;
         }
 
-        std::deque<Content_t> newItems;
+        Storage_t newItems;
         if (m_controller != nullptr) {
             Model &model = m_controller->model();
             std::for_each(std::begin(model), std::end(model), [&newItems, this](typename Model::NotificationItem_t item) {
@@ -187,28 +183,6 @@ private:
             endInsertRows();
         }
     }
-    void setStatusAndErrorMessage(Status status, const QString &errorMessage)
-    {
-        if (m_status != status) {
-            m_status = status;
-            Q_EMIT statusChanged();
-            switch (m_status) {
-            case Idle:
-                Q_EMIT finished();
-                break;
-            case Error:
-                Q_EMIT error();
-                break;
-            default:
-                break;
-            }
-        }
-
-        if (m_errorMessage != errorMessage) {
-            m_errorMessage = errorMessage;
-            Q_EMIT errorMessageChanged();
-        }
-    }
     void performMove(std::size_t from, std::size_t to)
     {
         if (from >= m_items.size() || to > m_items.size()) {
@@ -222,15 +196,13 @@ private:
         }
 
         std::size_t toIndex = (to < from) ? to : to - 1;
-        Content_t item = std::move(*(std::begin(m_items) + from));
+        StoredItem_t item = std::move(*(std::begin(m_items) + from));
         m_items.erase(std::begin(m_items) + from);
         m_items.insert(std::begin(m_items) + toIndex, std::move(item));
         endMoveRows();
     }
     bool m_complete {false};
     Controller_t *m_controller {nullptr};
-    Status m_status {Idle};
-    QString m_errorMessage {};
 };
 
 }}
