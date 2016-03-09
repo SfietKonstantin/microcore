@@ -46,8 +46,8 @@ public:
     using Item_t = Data;
     using SourceItems_t = std::vector<Item_t>;
     using OutputItems_t = std::vector<Key_t>;
-    explicit DataSourceModelAdaptor(DataSource_t &source)
-        : m_source(source)
+    explicit DataSourceModelAdaptor(std::unique_ptr<DataSource_t> source)
+        : m_source(std::move(source))
     {
     }
     OutputItems_t add(SourceItems_t &&data)
@@ -55,21 +55,21 @@ public:
         OutputItems_t returned (data.size(), nullptr);
         typename OutputItems_t::iterator it = std::begin(returned);
         std::for_each(std::begin(data), std::end(data), [this, &it](const Item_t &item) {
-            *it = &(m_source.add(Item_t(item)));
+            *it = &(m_source->add(Item_t(item)));
             ++it;
         });
         return returned;
     }
     bool remove(Key_t item)
     {
-        return m_source.remove(*item);
+        return m_source->remove(*item);
     }
     bool update(Key_t key, Item_t &&value)
     {
-        return m_source.update(*key, std::move(value));
+        return m_source->update(*key, std::move(value));
     }
 private:
-    DataSource_t &m_source;
+    std::unique_ptr<DataSource_t> m_source {};
 };
 
 template<class Key, class Data>
@@ -77,8 +77,8 @@ class DataSourceModel: public ModelBase<Data, DataSourceModelAdaptor<Key, Data>>
 {
 public:
     using DataSource_t = DataSource<Key, Data>;
-    explicit DataSourceModel(DataSource_t &source)
-        : ModelBase<Data, Adaptor_t>(Adaptor_t(source))
+    explicit DataSourceModel(std::unique_ptr<DataSource_t> source)
+        : ModelBase<Data, Adaptor_t>(Adaptor_t(std::move(source)))
     {
     }
 private:

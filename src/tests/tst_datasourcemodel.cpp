@@ -130,15 +130,11 @@ using MockTestModelListener = MockModelListener<Result, DataSourceModelAdaptor<i
 
 class TstDataSourceModel: public Test
 {
-public:
-    explicit TstDataSourceModel()
-        : m_source(std::function<int (const Result &)>(&Result::getKey))
-    {
-    }
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel(m_source));
+        std::unique_ptr<ResultSource> source {new ResultSource(std::function<int (const Result &)>(&Result::getKey))};
+        m_model.reset(new TestModel(std::move(source)));
         EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstDataSourceModel *>(this), &TstDataSourceModel::invalidateOnDestroyed));
         ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAppend));
         ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onPrepend));
@@ -153,7 +149,6 @@ protected:
             m_model->removeListener(m_listener);
         }
     }
-    ResultSource m_source;
     std::unique_ptr<TestModel> m_model {};
     NiceMock<MockTestModelListener> m_listener {};
     ListenerData m_listenerData {};
