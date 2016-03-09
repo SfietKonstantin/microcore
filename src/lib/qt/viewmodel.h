@@ -98,18 +98,18 @@ private:
     void onAppend(const typename Model::NotificationItems_t &items) override final
     {
         beginInsertRows(QModelIndex(), rowCount(), rowCount() + items.size() - 1);
-        for (typename Model::NotificationItem_t item : items) {
+        std::for_each(std::begin(items), std::end(items), [this](typename Model::NotificationItem_t item) {
             m_items.emplace_back(DataObject::create(*item, this));
-        }
+        });
         Q_EMIT countChanged();
         endInsertRows();
     }
     void onPrepend(const typename Model::NotificationItems_t &items) override final
     {
         beginInsertRows(QModelIndex(), 0, items.size() - 1);
-        for (auto it = items.rbegin(); it != items.rend(); ++it) {
-            m_items.emplace_front(DataObject::create(**it, this));
-        }
+        std::for_each(items.rbegin(), items.rend(), [this](typename Model::NotificationItem_t item) {
+            m_items.emplace_front(DataObject::create(*item, this));
+        });
         Q_EMIT countChanged();
         endInsertRows();
     }

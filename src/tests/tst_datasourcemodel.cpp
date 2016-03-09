@@ -30,7 +30,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "data/model.h"
+#include "data/datasourcemodel.h"
 #include "mockmodellistener.h"
 
 using namespace ::testing;
@@ -43,8 +43,17 @@ class Result
 {
 public:
     explicit Result() = default;
-    explicit Result(int v) : value {v} {}
+    explicit Result(int k, int v) : key {k}, value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(Result);
+    bool operator==(const Result &other) const
+    {
+        return other.key == key && other.value == value;
+    }
+    int getKey() const
+    {
+       return key;
+    }
+    int key {0};
     int value {0};
 };
 
@@ -115,16 +124,22 @@ private:
 
 }
 
-using TestModel = Model<Result>;
-using MockTestModelListener = MockModelListener<Result, ModelData<Result>>;
+using ResultSource = DataSource<int, Result>;
+using TestModel = DataSourceModel<int, Result>;
+using MockTestModelListener = MockModelListener<Result, DataSourceModelAdaptor<int, Result>>;
 
-class TstModel: public Test
+class TstDataSourceModel: public Test
 {
+public:
+    explicit TstDataSourceModel()
+        : m_source(std::function<int (const Result &)>(&Result::getKey))
+    {
+    }
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel());
-        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModel *>(this), &TstModel::invalidateOnDestroyed));
+        m_model.reset(new TestModel(m_source));
+        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstDataSourceModel *>(this), &TstDataSourceModel::invalidateOnDestroyed));
         ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAppend));
         ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onPrepend));
         ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
@@ -138,6 +153,7 @@ protected:
             m_model->removeListener(m_listener);
         }
     }
+    ResultSource m_source;
     std::unique_ptr<TestModel> m_model {};
     NiceMock<MockTestModelListener> m_listener {};
     ListenerData m_listenerData {};
@@ -145,13 +161,13 @@ protected:
 };
 
 
-TEST_F(TstModel, BaseOperations)
+TEST_F(TstDataSourceModel, BaseOperations)
 {
     {
         EXPECT_TRUE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(0));
     }
-    m_model->append({Result(1), Result(2)});
+    m_model->append({Result(1, 1), Result(2, 2)});
     {
         EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
@@ -163,7 +179,7 @@ TEST_F(TstModel, BaseOperations)
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
-    m_model->append({Result(3), Result(4), Result(5)});
+    m_model->append({Result(3, 3), Result(4, 4), Result(5, 5)});
     {
         EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
@@ -197,7 +213,7 @@ TEST_F(TstModel, BaseOperations)
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
-    m_model->prepend({Result(6)});
+    m_model->prepend({Result(6, 6)});
     {
         EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
@@ -249,7 +265,7 @@ TEST_F(TstModel, BaseOperations)
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
-    EXPECT_TRUE(m_model->update(2, Result(2)));
+    EXPECT_TRUE(m_model->update(2, Result(6, 2)));
     {
         EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
@@ -268,10 +284,10 @@ TEST_F(TstModel, BaseOperations)
     }
 }
 
-TEST_F(TstModel, InvalidOperations)
+TEST_F(TstDataSourceModel, InvalidOperations)
 {
-    m_model->append({Result(1), Result(2)});
-    EXPECT_FALSE(m_model->update(2, Result(3)));
+    m_model->append({Result(1, 1), Result(2, 2)});
+    EXPECT_FALSE(m_model->update(2, Result(3, 3)));
     EXPECT_FALSE(m_model->remove(2));
 }
 
@@ -300,26 +316,9 @@ public:
     }
 };
 
-class InvalidModel final : public ModelBase<Result, MockStore<Result>>
+TEST_F(TstDataSourceModel, Move)
 {
-public:
-    explicit InvalidModel()
-        : ModelBase<Result, MockStore<Result>>(MockStore<Result>())
-    {
-    }
-};
-
-TEST_F(TstModel, InvalidOperations2)
-{
-    InvalidModel model {};
-    model.append({Result(1), Result(2)});
-    EXPECT_FALSE(model.update(0, Result(3)));
-    EXPECT_FALSE(model.remove(0));
-}
-
-TEST_F(TstModel, Move)
-{
-    m_model->append({Result(1), Result(2), Result(3)});
+    m_model->append({Result(1, 1), Result(2, 2), Result(3, 3)});
     EXPECT_FALSE(m_model->move(0, 0));
     EXPECT_FALSE(m_model->move(0, 1));
     EXPECT_TRUE(m_model->move(0, 2));
@@ -401,13 +400,13 @@ TEST_F(TstModel, Move)
     EXPECT_FALSE(m_model->move(3, 3));
 }
 
-TEST_F(TstModel, TestListener)
+TEST_F(TstDataSourceModel, TestListener)
 {
     m_model->addListener(m_listener);
     {
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
     }
-    m_model->append({Result(1), Result(2)});
+    m_model->append({Result(1, 1), Result(2, 2)});
     {
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
         auto modelIt = std::begin(*m_model);
@@ -422,7 +421,7 @@ TEST_F(TstModel, TestListener)
         EXPECT_TRUE(modelIt == std::end(*m_model));
         EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
     }
-    m_model->append({Result(3), Result(4), Result(5)});
+    m_model->append({Result(3, 3), Result(4, 4), Result(5, 5)});
     {
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
         auto modelIt = std::begin(*m_model);
@@ -447,7 +446,7 @@ TEST_F(TstModel, TestListener)
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Remove);
         EXPECT_EQ(m_listenerData.currentIndex, 1);
     }
-    m_model->prepend({Result(6)});
+    m_model->prepend({Result(6, 6)});
     {
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Prepend);
         auto modelIt = std::begin(*m_model);
@@ -470,16 +469,16 @@ TEST_F(TstModel, TestListener)
         EXPECT_EQ(m_listenerData.currentIndex, 2);
         EXPECT_EQ(m_listenerData.currentIndex2, 0);
     }
-    m_model->update(2, Result(2));
+    m_model->update(2, Result(6, 2));
     {
         EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Update);
         EXPECT_EQ(m_listenerData.currentIndex, 2);
     }
 }
 
-TEST_F(TstModel, TestListenerDelayAdd)
+TEST_F(TstDataSourceModel, TestListenerDelayAdd)
 {
-    m_model->append({Result(1), Result(2)});
+    m_model->append({Result(1, 1), Result(2, 2)});
     m_model->addListener(m_listener);
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
     auto modelIt = std::begin(*m_model);
@@ -495,7 +494,7 @@ TEST_F(TstModel, TestListenerDelayAdd)
     EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
 }
 
-TEST_F(TstModel, TestListenerInvalidation)
+TEST_F(TstDataSourceModel, TestListenerInvalidation)
 {
     m_model->addListener(m_listener);
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);

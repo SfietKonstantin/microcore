@@ -27,6 +27,7 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_pipe.cpp
     includes/tst_core_qobjectptr.cpp
     includes/tst_data_datasource.cpp
+    includes/tst_data_datasourcemodel.cpp
     includes/tst_data_model.cpp
     includes/tst_data_modeldata.cpp
     includes/tst_data_modeloperator.cpp
@@ -41,7 +42,6 @@ set(${PROJECT_NAME}_INCLUDES
 set(${PROJECT_NAME}_SRCS
     mockjob.h
     mockjobfactory.h
-    mockdatasourcelistener.h
     mockexecutorlistener.h
     mockmodellistener.h
     tst_main.cpp
@@ -51,6 +51,7 @@ set(${PROJECT_NAME}_SRCS
     tst_datasource.cpp
     tst_modeldata.cpp
     tst_model.cpp
+    tst_datasourcemodel.cpp
     tst_modeloperator.cpp
     tst_qtviewmodel.cpp
 )

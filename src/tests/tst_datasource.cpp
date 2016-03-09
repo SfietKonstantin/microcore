@@ -31,7 +31,6 @@
 
 #include <gtest/gtest.h>
 #include "data/datasource.h"
-#include "mockdatasourcelistener.h"
 
 using namespace ::testing;
 using namespace ::microcore::data;
@@ -59,160 +58,61 @@ public:
 }
 
 using ResultSource = DataSource<int, Result>;
-using MockResultSourceListener = MockDataSourceListener<int, Result>;
-
-namespace {
-
-class ListenerData
-{
-public:
-    explicit ListenerData() = default;
-    void onAdd(const Result &result)
-    {
-        clear();
-        results.insert(&result);
-    }
-    void onRemove(const Result &result)
-    {
-        clear();
-        results.erase(&result);
-    }
-    void onUpdate(const Result &result)
-    {
-        clear();
-        lastUpdated = &result;
-    }
-    void onInvalidation(ResultSource &source)
-    {
-        clear();
-        invalidatedSource = &source;
-    }
-    std::set<const Result *> results {};
-    const Result *lastUpdated {nullptr};
-    ResultSource *invalidatedSource {nullptr};
-private:
-    void clear()
-    {
-        lastUpdated = nullptr;
-        invalidatedSource = nullptr;
-    }
-};
-
-}
 
 class TstDataSource: public Test
 {
+public:
+    explicit TstDataSource()
+        : m_data(std::function<int (const Result &)>(&Result::getKey))
+    {
+    }
 protected:
-   void SetUp() override final
-   {
-      m_data.reset(new ResultSource(std::function<int (const Result &)>(&Result::getKey)));
-      EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstDataSource *>(this), &TstDataSource::invalidateOnDestroyed));
-      ON_CALL(m_listener, onAdd(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAdd));
-      ON_CALL(m_listener, onUpdate(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
-      ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onRemove));
-      ON_CALL(m_listener, onInvalidation(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
-   }
-   void invalidateOnDestroyed()
-   {
-       if (!m_invalidated) {
-           m_data->removeListener(m_listener);
-       }
-   }
-   std::unique_ptr<ResultSource> m_data {};
-   NiceMock<MockResultSourceListener> m_listener {};
-   ListenerData m_listenerData {};
-   bool m_invalidated {false};
+   ResultSource m_data;
 };
 
 TEST_F(TstDataSource, TestSize)
 {
-    m_data->add(Result(1, 1));
-    EXPECT_FALSE(m_data->empty());
-    EXPECT_EQ(m_data->size(), 1);
-    m_data->add(Result(2, 2));
-    EXPECT_FALSE(m_data->empty());
-    EXPECT_EQ(m_data->size(), 2);
-    m_data->add(Result(1, 2));
-    EXPECT_FALSE(m_data->empty());
-    EXPECT_EQ(m_data->size(), 2);
-    m_data->remove(Result(1, 123));
-    EXPECT_FALSE(m_data->empty());
-    EXPECT_EQ(m_data->size(), 1);
-    m_data->remove(Result(2, 123));
-    EXPECT_TRUE(m_data->empty());
-    EXPECT_EQ(m_data->size(), 0);
+    m_data.add(Result(1, 1));
+    EXPECT_FALSE(m_data.empty());
+    EXPECT_EQ(m_data.size(), 1);
+    m_data.add(Result(2, 2));
+    EXPECT_FALSE(m_data.empty());
+    EXPECT_EQ(m_data.size(), 2);
+    m_data.add(Result(1, 2));
+    EXPECT_FALSE(m_data.empty());
+    EXPECT_EQ(m_data.size(), 2);
+    m_data.remove(Result(1, 123));
+    EXPECT_FALSE(m_data.empty());
+    EXPECT_EQ(m_data.size(), 1);
+    m_data.remove(Result(2, 123));
+    EXPECT_TRUE(m_data.empty());
+    EXPECT_EQ(m_data.size(), 0);
+}
+
+TEST_F(TstDataSource, TestRemoveFail)
+{
+    m_data.add(Result(1, 1));
+    m_data.remove(Result(2, 1));
+    EXPECT_EQ(m_data.size(), 1);
 }
 
 TEST_F(TstDataSource, TestUpdate)
 {
-    const Result &result1 = m_data->add(Result(1, 1));
+    const Result &result1 = m_data.add(Result(1, 1));
     EXPECT_EQ(result1, Result(1, 1));
-    m_data->add(Result(1, 2));
+    m_data.add(Result(1, 2));
 
-    const Result &result1Update = m_data->add(Result(1, 2));
+    const Result &result1Update = m_data.add(Result(1, 2));
     EXPECT_EQ(result1, Result(1, 2));
     EXPECT_EQ(result1Update, Result(1, 2));
     EXPECT_EQ(&result1, &result1Update);
 }
 
-TEST_F(TstDataSource, TestListener)
+TEST_F(TstDataSource, TestUpdate2)
 {
-    m_data->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(0));
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-
-    const Result &result1 = m_data->add(Result(1, 1));
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(1));
-    EXPECT_NE(m_listenerData.results.find(&result1), m_listenerData.results.end());
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-
-    const Result &result2 = m_data->add(Result(2, 2));
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(2));
-    EXPECT_NE(m_listenerData.results.find(&result1), m_listenerData.results.end());
-    EXPECT_NE(m_listenerData.results.find(&result2), m_listenerData.results.end());
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-
-    const Result &result1Update = m_data->add(Result(1, 2));
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(2));
-    EXPECT_NE(m_listenerData.results.find(&result1), m_listenerData.results.end());
-    EXPECT_NE(m_listenerData.results.find(&result2), m_listenerData.results.end());
-    EXPECT_EQ(m_listenerData.lastUpdated, &result1Update);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-
-    m_data->remove(result1);
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(1));
-    EXPECT_NE(m_listenerData.results.find(&result2), m_listenerData.results.end());
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
+    const Result &result1 = m_data.add(Result(1, 1));
+    EXPECT_EQ(result1, Result(1, 1));
+    EXPECT_TRUE(m_data.update(result1, Result(1, 2)));
+    EXPECT_FALSE(m_data.update(result1, Result(2, 2)));
+    EXPECT_FALSE(m_data.update(Result(2, 2), Result(2, 1)));
 }
-
-TEST_F(TstDataSource, TestListenerDelayAdd)
-{
-    const Result &result1 = m_data->add(Result(1, 1));
-    const Result &result2 = m_data->add(Result(2, 2));
-    m_data->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(2));
-    EXPECT_NE(m_listenerData.results.find(&result1), m_listenerData.results.end());
-    EXPECT_NE(m_listenerData.results.find(&result2), m_listenerData.results.end());
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-}
-
-TEST_F(TstDataSource, TestListenerInvalidation)
-{
-    m_data->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(0));
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, nullptr);
-
-    ResultSource *oldData = m_data.get();
-    m_data.reset();
-    EXPECT_EQ(m_listenerData.results.size(), static_cast<std::size_t>(0));
-    EXPECT_EQ(m_listenerData.lastUpdated, nullptr);
-    EXPECT_EQ(m_listenerData.invalidatedSource, oldData);
-    m_invalidated = true;
-}
-

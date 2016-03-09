@@ -95,7 +95,6 @@ public:
         *it->second = std::move(value);
         return true;
     }
-
 private:
     Storage_t m_data {};
 };

@@ -53,27 +53,12 @@ public:
     using Item_t = V;
     using NotificationItem_t = const Item_t &;
     using GetKeyFunction_t = std::function<Key_t (const Item_t &)>;
-    class IListener
-    {
-    public:
-        virtual ~IListener() {}
-        virtual void onAdd(typename DataSource::NotificationItem_t data) = 0;
-        virtual void onUpdate(typename DataSource::NotificationItem_t data) = 0;
-        virtual void onRemove(typename DataSource::NotificationItem_t data) = 0;
-        virtual void onInvalidation(DataSource<K, V> &source) = 0;
-    };
     explicit DataSource(GetKeyFunction_t &&getKeyFunction)
         : m_getKeyFunction {std::move(getKeyFunction)}
     {
         Q_ASSERT(m_getKeyFunction);
     }
     DISABLE_COPY_DEFAULT_MOVE(DataSource);
-    ~DataSource()
-    {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onInvalidation, _1, std::ref(*this)));
-    }
     bool empty() const
     {
         return m_data.empty();
@@ -84,7 +69,6 @@ public:
     }
     const Item_t & add(Item_t &&item)
     {
-        using namespace std::placeholders;
         const Key_t &key = m_getKeyFunction(item);
         auto it = m_data.find(key);
 
@@ -92,52 +76,49 @@ public:
             // Update the already added item
             Item_t &newItem = *(it->second);
             newItem = std::move(item);
-
-            std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onUpdate, _1, std::ref(newItem)));
             return newItem;
         } else {
             auto result = m_data.emplace(key, StoredItem_t(new Item_t(std::move(item))));
             Q_ASSERT(result.second); // Should be added
-            Item_t &existingItem = *(result.first->second);
-
-            std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onAdd, _1, std::ref(existingItem)));
-            return existingItem;
+            return *(result.first->second);
         }
     }
-    void remove(const Item_t &item)
+    bool update(const Item_t &source, Item_t &&value)
     {
-        using namespace std::placeholders;
+        const Key_t &sourceKey = m_getKeyFunction(source);
+        const Key_t &valueKey = m_getKeyFunction(value);
+        if (sourceKey != valueKey) {
+            return false;
+        }
+
+        auto it = m_data.find(sourceKey);
+
+        if (it == m_data.end()) {
+            return false;
+        }
+
+        Item_t &newItem = *(it->second);
+        newItem = std::move(value);
+        return true;
+    }
+
+    bool remove(const Item_t &item)
+    {
         const Key_t &key = m_getKeyFunction(item);
         auto it = m_data.find(key);
 
-        if (it != m_data.end()) {
-            Item_t &existingItem = *(it->second);
-
-            std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                          std::bind(&IListener::onRemove, _1, std::ref(existingItem)));
-            m_data.erase(it);
+        if (it == m_data.end()) {
+            return false;
         }
-    }
-    void addListener(IListener &listener)
-    {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_data), std::end(m_data), [&listener](const typename Storage_t::value_type &it) {
-            listener.onAdd(*(it.second));
-        });
-        m_listeners.insert(&listener);
-    }
-    void removeListener(IListener &listener)
-    {
-        m_listeners.erase(&listener);
+
+        m_data.erase(it);
+        return true;
     }
 private:
     using StoredItem_t = std::unique_ptr<Item_t>;
     using Storage_t = std::map<Key_t, StoredItem_t>;
     GetKeyFunction_t m_getKeyFunction {};
     Storage_t m_data {};
-    std::set<IListener *> m_listeners {};
 };
 
 }}
