@@ -110,10 +110,11 @@ private:
         if (m_controller == nullptr) {
             m_data.reset();
         } else {
-            m_data.reset(new DataObject(Data(m_controller->data())));
+            m_data.reset(new DataObject(SourceItem_t(m_controller->item().data())));
         }
         Q_EMIT itemChanged();
     }
+    using SourceItem_t = typename Item::SourceItem_t;
     bool m_complete {false};
     Controller_t *m_controller {nullptr};
 };
