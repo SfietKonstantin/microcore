@@ -59,6 +59,7 @@ public:
             onError(Error("${module}_${name.lower()}", 
                           QLatin1String("${property["json_path"]} cannot be found"), 
                           m_request.toJson(QJsonDocument::Compact)));
+            return;
         }
         % endfor
         onResult(${name}Result(
