@@ -2,6 +2,10 @@
 from mako.template import Template
 import yaml
 import argparse
+import os
+
+def _get_tpl(tpl):
+    return os.path.join(os.path.dirname(os.path.realpath(__file__)), tpl)
 
 class MicroGenException(Exception):
     def __init__(self, value):
@@ -21,19 +25,19 @@ class BeanGenerator:
         self._enrich_properties()
         
         with open(self.output + self.data["name"].lower() + ".h", 'w') as h:
-            template = Template(filename="bean.h.tpl")
+            template = Template(filename=_get_tpl("bean.h.tpl"))
             h.write(template.render(**self.data))
             h.close()
         with open(self.output + self.data["name"].lower() + ".cpp", 'w') as cpp:
-            template = Template(filename="bean.cpp.tpl")
+            template = Template(filename=_get_tpl("bean.cpp.tpl"))
             cpp.write(template.render(**self.data))
             cpp.close()
         with open(self.output + self.data["name"].lower() + "object.h", 'w') as qth:
-            template = Template(filename="beanobject.h.tpl")
+            template = Template(filename=_get_tpl("beanobject.h.tpl"))
             qth.write(template.render(**self.data))
             qth.close()
         with open(self.output + self.data["name"].lower() + "object.cpp", 'w') as qtcpp:
-            template = Template(filename="beanobject.cpp.tpl")
+            template = Template(filename=_get_tpl("beanobject.cpp.tpl"))
             qtcpp.write(template.render(**self.data))
             qtcpp.close()
     
@@ -131,17 +135,17 @@ class JsonFactoryGenerator:
         self._enrich_properties()
         
         with open(self.output + self.data["name"].lower() + "types.h", 'w') as th:
-            template = Template(filename="types.h.tpl")
+            template = Template(filename=_get_tpl("types.h.tpl"))
             th.write(template.render(**self.data))
             th.close()
             
         with open(self.output + self.data["name"].lower() + "factory.h", 'w') as fh:
-            template = Template(filename="factory.h.tpl")
+            template = Template(filename=_get_tpl("factory.h.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
     
         with open(self.output + self.data["name"].lower() + "factory.cpp", 'w') as fh:
-            template = Template(filename="factoryjson.cpp.tpl")
+            template = Template(filename=_get_tpl("factoryjson.cpp.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
             
@@ -206,7 +210,7 @@ class JsonFactoryGenerator:
             
     def _enrich_data(self):
         if data["source"] == "json":
-            data["request"] = "::microcore::json::JsonRequest"
+            data["request"] = "::microcore::json::JsonResult"
             data["request_include"] = "<json/jsontypes.h>"
         
     def _enrich_properties(self):

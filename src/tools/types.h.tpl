@@ -37,7 +37,7 @@
 #include "core/ijob.h"
 #include "error/error.h"
 #include ${request_include}
-#include "${name}.h"
+#include "${name.lower()}.h"
 
 namespace microcore { namespace ${module} {
 

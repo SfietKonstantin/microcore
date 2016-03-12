@@ -66,7 +66,7 @@ private:
     % for property in properties:
     ${property["type"]} m_${property["name"]} {${property["initial_value"]}};
     % endfor
-}
+};
 
 }}
 

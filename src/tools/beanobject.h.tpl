@@ -44,11 +44,11 @@ class ${name}Object : public QObject
     Q_OBJECT
     % for property in properties:
     % if property["access"] == "c":
-    Q_PROPERTY(${property["type"]} READ ${property["getter"]} CONSTANT)
+    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} CONSTANT)
     % elif property["access"] == "r":
-    Q_PROPERTY(${property["type"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
+    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
     % elif property["access"] == "rw":
-    Q_PROPERTY(${property["type"]} READ ${property["getter"]} WRITE ${property["setter"]} NOTIFY ${property["name"]}Changed)
+    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} WRITE ${property["setter"]} NOTIFY ${property["name"]}Changed)
     % endif
     % endfor
 public:
@@ -69,7 +69,7 @@ Q_SIGNALS:
 % endif
 private:
     ::microcore::${module}::${name} m_data {};
-}
+};
 
 }}}
 

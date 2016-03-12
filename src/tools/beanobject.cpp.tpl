@@ -64,6 +64,8 @@ void ${name}Object::update(::microcore::${module}::${name} &&data)
     }
     % endif
     % endfor
+% else:
+    Q_UNUSED(data);
 % endif
 }
     
