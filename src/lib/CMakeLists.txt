@@ -48,6 +48,7 @@ set(${PROJECT_NAME}_QT_SRCS
     qt/viewcontroller.cpp
     qt/viewmodelcontroller.h
     qt/iviewitem.h
+    qt/viewitem.h
     qt/viewitemcontroller.h
 )
 
