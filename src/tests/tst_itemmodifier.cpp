@@ -31,6 +31,7 @@
 
 #include <gtest/gtest.h>
 #include "error/error.h"
+#include "data/item.h"
 #include "mockjob.h"
 #include "mockjobfactory.h"
 #include "mockitemmodifierlistener.h"
@@ -54,9 +55,10 @@ public:
 
 }
 
-using TestItemModifier = ItemModifier<Result, int, Error>;
-using MockTestItemModifierListener = MockItemModifierListener<TestItemModifier, int, Error>;
-using ModifierJob = MockJob<Result, Error>;
+using TestItem = Item<Result>;
+using TestItemModifier = ItemModifier<TestItem, int, Error>;
+using MockTestItemModifierListener = MockItemModifierListener<TestItem, int, Error>;
+using ModifierJob = MockJob<TestItem::SourceItem_t, Error>;
 
 namespace {
 
@@ -114,7 +116,9 @@ protected:
     {
         std::unique_ptr<Factory_t> factory (new Factory_t());
         m_factory = factory.get();
-        m_modifier.reset(new TestItemModifier(m_result, std::move(factory)));
+
+        m_item.reset(new TestItem());
+        m_modifier.reset(new TestItemModifier(*m_item, std::move(factory)));
         EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstItemModifier *>(this), &TstItemModifier::invalidateOnDestroyed));
         ON_CALL(m_listener, onStart()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onStart));
         ON_CALL(m_listener, onFinish()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onFinish));
@@ -127,8 +131,8 @@ protected:
             m_modifier->removeListener(m_listener);
         }
     }
-    using Factory_t = NiceMock<MockJobFactory<int, Result, Error>>;
-    Result m_result {};
+    using Factory_t = NiceMock<MockJobFactory<int, TestItem::SourceItem_t, Error>>;
+    std::unique_ptr<TestItem> m_item {};
     Factory_t *m_factory {nullptr};
     std::unique_ptr<TestItemModifier> m_modifier {};
     NiceMock<MockTestItemModifierListener> m_listener {};
@@ -156,11 +160,11 @@ TEST_F(TstItemModifier, TestSuccess)
     EXPECT_TRUE(m_modifier->start(1));
 
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
-    EXPECT_EQ(m_result.value, 0);
+    EXPECT_EQ(m_item->data().value, 0);
     m_onResult(Result(1));
 
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Finish);
-    EXPECT_EQ(m_result.value, 1);
+    EXPECT_EQ(m_item->data().value, 1);
 }
 
 TEST_F(TstItemModifier, TestError)
@@ -181,7 +185,7 @@ TEST_F(TstItemModifier, TestError)
     EXPECT_TRUE(m_modifier->start(1));
 
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
-    EXPECT_EQ(m_result.value, 0);
+    EXPECT_EQ(m_item->data().value, 0);
     m_onError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
 
     EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
@@ -189,7 +193,7 @@ TEST_F(TstItemModifier, TestError)
     EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
     EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
 
-    EXPECT_EQ(m_result.value, 0);
+    EXPECT_EQ(m_item->data().value, 0);
 }
 
 TEST_F(TstItemModifier, TestBusy)

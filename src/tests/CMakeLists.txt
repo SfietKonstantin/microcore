@@ -30,6 +30,7 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_data_datasourcemodel.cpp
     includes/tst_data_model.cpp
     includes/tst_data_modeldata.cpp
+    includes/tst_data_item.cpp
     includes/tst_data_dataoperator.cpp
     includes/tst_data_modelappender.cpp
     includes/tst_data_itemmodifier.cpp

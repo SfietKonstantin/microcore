@@ -29,28 +29,61 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_ITEMMODIFIER_H
-#define MICROCORE_DATA_ITEMMODIFIER_H
+#ifndef MICROCORE_DATA_ITEM_H
+#define MICROCORE_DATA_ITEM_H
 
-#include "data/dataoperator.h"
+#include "core/globals.h"
+#include <algorithm>
+#include <functional>
+#include <set>
 
 namespace microcore { namespace data {
 
-template<class Item, class Request, class Error>
-class ItemModifier: public DataOperator<Item, Request, typename Item::SourceItem_t, Error>
+template<class Data>
+class Item
 {
 public:
-    using Result_t = typename Item::SourceItem_t;
-    using Factory_t = ::microcore::core::IJobFactory<Request, Result_t, Error>;
-    ItemModifier(Item &item, std::unique_ptr<Factory_t> factory)
-        : Parent_t(item, std::move(factory), OperatorFunction_t(&Item::setData))
+    using SourceItem_t = Data;
+    class IListener
     {
+    public:
+         virtual ~IListener() {}
+         virtual void onModified(const Data &data) = 0;
+         virtual void onInvalidation() = 0;
+    };
+    DISABLE_COPY_DEFAULT_MOVE(Item);
+    explicit Item() = default;
+    virtual ~Item()
+    {
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IListener::onInvalidation, _1));
+    }
+    const Data & data() const
+    {
+        return m_data;
+    }
+    void setData(Data &&data)
+    {
+        using namespace std::placeholders;
+        m_data = std::move(data);
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IListener::onModified, _1, m_data));
+    }
+    void addListener(IListener &listener)
+    {
+        m_listeners.insert(&listener);
+        listener.onModified(m_data);
+    }
+    void removeListener(IListener &listener)
+    {
+        m_listeners.erase(&listener);
     }
 private:
-    using Parent_t = DataOperator<Item, Request, Result_t, Error>;
-    using OperatorFunction_t = std::function<void (Item &, Result_t &&)>;
+    Data m_data {};
+    std::set<IListener *> m_listeners {};
 };
 
 }}
 
-#endif // MICROCORE_DATA_ITEMMODIFIER_H
+#endif // MICROCORE_DATA_ITEM_H

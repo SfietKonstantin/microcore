@@ -39,10 +39,16 @@
 
 namespace microcore { namespace qt {
 
-template<class Data, class DataObject>
-class ViewItem: public IViewItem
+template<class Item, class DataObject>
+class ViewItem: public IViewItem, public Item::IListener
 {
 public:
+    ~ViewItem()
+    {
+        if (m_controller != nullptr) {
+            m_controller->item().removeListener(*this);
+        }
+    }
     void classBegin() override
     {
     }
@@ -64,11 +70,11 @@ public:
         Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);
         if (m_controller != controller) {
             if (m_controller) {
-                disconnect(m_controller, &Controller_t::finished, this, &ViewItem<Data, DataObject>::refreshData);
+                m_controller->item().removeListener(*this);
             }
             m_controller = controller;
             if (m_controller) {
-                connect(m_controller, &Controller_t::finished, this, &ViewItem<Data, DataObject>::refreshData);
+                m_controller->item().addListener(*this);
             }
             Q_EMIT controllerChanged();
             refreshData();
@@ -82,7 +88,19 @@ protected:
     }
     Data_t m_data {};
 private:
-    using Controller_t = ViewItemController<Data>;
+    using Controller_t = ViewItemController<Item>;
+    void onModified(const typename Item::SourceItem_t &data) override final
+    {
+        Q_UNUSED(data)
+        refreshData();
+    }
+    void onInvalidation() override final
+    {
+        if (m_controller != nullptr) {
+            m_controller = nullptr;
+            Q_EMIT controllerChanged();
+        }
+    }
     void refreshData()
     {
         if (!m_complete) {
