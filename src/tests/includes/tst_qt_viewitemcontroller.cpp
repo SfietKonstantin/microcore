@@ -29,34 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_QT_IVIEWMODEL_H
-#define MICROCORE_QT_IVIEWMODEL_H
-
-#include <QtCore/QAbstractListModel>
-#include <QtQml/QQmlParserStatus>
-#include "core/globals.h"
-
-namespace microcore { namespace qt {
-
-class IViewModel : public QAbstractListModel, public QQmlParserStatus
-{
-    Q_OBJECT
-    Q_INTERFACES(QQmlParserStatus)
-    Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
-    Q_PROPERTY(int count READ count NOTIFY countChanged)
-public:
-    DISABLE_COPY_DISABLE_MOVE(IViewModel);
-    virtual ~IViewModel() {}
-    virtual QObject * controller() const = 0;
-    virtual void setController(QObject *controller) = 0;
-    virtual int count() const = 0;
-Q_SIGNALS:
-    void controllerChanged();
-    void countChanged();
-protected:
-    explicit IViewModel(QObject *parent = nullptr) : QAbstractListModel(parent), QQmlParserStatus() {}
-};
-
-}}
-
-#endif // MICROCORE_QT_IVIEWMODEL_H
+#include "qt/viewitemcontroller.h"

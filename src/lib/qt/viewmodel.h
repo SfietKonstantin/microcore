@@ -88,7 +88,7 @@ public:
 protected:
     using StoredItem_t = QObjectPtr<DataObject>;
     using Storage_t = std::deque<StoredItem_t>;
-    explicit ViewModel(QObject *parent = 0)
+    explicit ViewModel(QObject *parent = nullptr)
         : IViewModel(parent)
     {
     }

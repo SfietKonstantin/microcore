@@ -34,6 +34,7 @@
 #include "qt/viewmodel.h"
 
 using namespace ::testing;
+using namespace ::microcore;
 using namespace ::microcore::data;
 using namespace ::microcore::qt;
 

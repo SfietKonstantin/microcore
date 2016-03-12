@@ -35,8 +35,10 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_json_jsontypes.cpp
     includes/tst_qt_iviewmodel.cpp
     includes/tst_qt_viewmodel.cpp
-    includes/tst_qt_iviewmodelcontroller.cpp
-    includes/tst_qt_viewmodelcontroller.cpp
+    includes/tst_qt_viewcontroller.cpp
+    includes/tst_qt_iviewitem.cpp
+    includes/tst_qt_viewitem.cpp
+    includes/tst_qt_viewitemcontroller.cpp
 )
 
 set(${PROJECT_NAME}_SRCS

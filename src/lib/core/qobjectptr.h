@@ -35,6 +35,8 @@
 #include <memory>
 #include <QObject>
 
+namespace microcore {
+
 /**
  * @brief A deleter for QObjects
  */
@@ -53,5 +55,7 @@ public:
  */
 template<class T>
 using QObjectPtr = std::unique_ptr<T, QObjectDeleter<T>>;
+
+}
 
 #endif // MICROCORE_CORE_QOBJECTPTR_H

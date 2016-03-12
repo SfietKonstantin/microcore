@@ -43,8 +43,10 @@ set(${PROJECT_NAME}_DATA_SRCS
 set(${PROJECT_NAME}_QT_SRCS
     qt/iviewmodel.h
     qt/viewmodel.h
-    qt/iviewmodelcontroller.h
+    qt/viewcontroller.cpp
     qt/viewmodelcontroller.h
+    qt/iviewitem.h
+    qt/viewitemcontroller.h
 )
 
 add_library(${PROJECT_NAME} STATIC

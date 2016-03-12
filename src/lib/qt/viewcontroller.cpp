@@ -29,4 +29,75 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "qt/iviewmodelcontroller.h"
+#include "viewcontroller.h"
+
+namespace microcore { namespace qt {
+
+ViewController::ViewController(QObject *parent)
+    : QObject(parent), QQmlParserStatus()
+{
+}
+
+ViewController::~ViewController()
+{
+}
+
+void ViewController::classBegin()
+{
+}
+
+void ViewController::componentComplete()
+{
+}
+
+ViewController::Status ViewController::status() const
+{
+    return m_status;
+}
+
+QString ViewController::errorMessage() const
+{
+    return m_errorMessage;
+}
+
+void ViewController::addExecutor(std::unique_ptr<Executor_t> executor)
+{
+    m_executors.emplace(executor.get(), std::move(executor));
+}
+
+void ViewController::onStart()
+{
+    Q_ASSERT(m_status != Busy);
+    setStatus(Busy);
+}
+
+void microcore::qt::ViewController::onFinish()
+{
+    Q_ASSERT(m_status == Busy);
+    setStatus(Idle);
+}
+
+void ViewController::onError(const ViewController::Error_t &error)
+{
+    Q_ASSERT(m_status == Busy);
+    setStatus(Error);
+    if (m_errorMessage != error.message()) {
+        m_errorMessage = error.message();
+        Q_EMIT errorMessageChanged();
+    }
+}
+
+void ViewController::onInvalidation(ViewController::Executor_t &source)
+{
+    m_executors.erase(&source);
+}
+
+void ViewController::setStatus(ViewController::Status status)
+{
+    if (m_status != status) {
+        m_status = status;
+        Q_EMIT statusChanged();
+    }
+}
+
+}}
