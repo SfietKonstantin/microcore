@@ -140,12 +140,12 @@ class JsonFactoryGenerator:
             th.write(template.render(**self.data))
             th.close()
             
-        with open(self.output + self.data["name"].lower() + "factory.h", 'w') as fh:
+        with open(self.output + self.data["name"].lower() + "requestfactory.h", 'w') as fh:
             template = Template(filename=_get_tpl("factory.h.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
     
-        with open(self.output + self.data["name"].lower() + "factory.cpp", 'w') as fh:
+        with open(self.output + self.data["name"].lower() + "requestfactory.cpp", 'w') as fh:
             template = Template(filename=_get_tpl("factoryjson.cpp.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
