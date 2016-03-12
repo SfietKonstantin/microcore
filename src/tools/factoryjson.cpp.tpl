@@ -55,12 +55,14 @@ public:
         % endfor
         
         % for property in properties:
+        % if not "json_optional" in property or not property["json_optional"]:
         if (!${property["json_object"]}.contains(QLatin1String("${property["json_key"]}"))) {
             onError(Error("${module}_${name.lower()}", 
                           QLatin1String("${property["json_path"]} cannot be found"), 
                           m_request.toJson(QJsonDocument::Compact)));
             return;
         }
+        % endif
         % endfor
         onResult(${name}Result(
             % for i, property in enumerate(properties):
