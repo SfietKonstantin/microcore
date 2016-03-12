@@ -34,7 +34,7 @@
 #include "data/model.h"
 #include "mockjob.h"
 #include "mockjobfactory.h"
-#include "mockmodeloperatorlistener.h"
+#include "mockmodelappenderlistener.h"
 
 using namespace std::placeholders;
 using namespace ::testing;

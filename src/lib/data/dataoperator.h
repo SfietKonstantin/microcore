@@ -29,8 +29,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MODELOPERATOR_H
-#define MICROCORE_DATA_MODELOPERATOR_H
+#ifndef MICROCORE_DATA_DATAOPERATOR_H
+#define MICROCORE_DATA_DATAOPERATOR_H
 
 #include "core/pipe.h"
 #include "core/executor.h"
@@ -38,16 +38,16 @@
 
 namespace microcore { namespace data {
 
-template<class Model, class Request, class Result, class Error>
-class ModelOperator: public ::microcore::core::Executor<Error>
+template<class Data, class Request, class Result, class Error>
+class DataOperator: public ::microcore::core::Executor<Error>
 {
 public:
     using Factory_t = ::microcore::core::IJobFactory<Request, Result, Error>;
-    using OperatorFunction_t = std::function<void (Model &, Result &&)>;
+    using OperatorFunction_t = std::function<void (Data &, Result &&)>;
     using Listener_t = typename ::microcore::core::Executor<Error>::IListener;
     using Executor_t = ::microcore::core::Executor<Error>;
-    ModelOperator(Model &model, std::unique_ptr<Factory_t> factory, OperatorFunction_t &&operatorFunction)
-        : m_model(model), m_factory(std::move(factory)), m_operatorFunction(std::move(operatorFunction))
+    DataOperator(Data &data, std::unique_ptr<Factory_t> factory, OperatorFunction_t &&operatorFunction)
+        : m_data(data), m_factory(std::move(factory)), m_operatorFunction(std::move(operatorFunction))
     {
     }
     bool start(Request &&request)
@@ -58,7 +58,7 @@ public:
         }
 
         OnResult_t onResult {[this](Result &&result) {
-            m_operatorFunction(m_model, std::move(result));
+            m_operatorFunction(m_data, std::move(result));
             finish();
         }};
         OnError_t onError {std::bind(&This_t::error, this, _1)};
@@ -70,7 +70,7 @@ public:
         return true;
     }
 private:
-    using This_t = ModelOperator<Model, Request, Result, Error>;
+    using This_t = DataOperator<Data, Request, Result, Error>;
     using Pipe_t = ::microcore::core::Pipe<Request, Result, Error>;
     using OnResult_t = typename ::microcore::core::IJob<Result, Error>::OnResult_t;
     using OnError_t = typename ::microcore::core::IJob<Result, Error>::OnError_t;
@@ -84,27 +84,12 @@ private:
         m_pipe.reset();
         Executor_t::doFinish();
     }
-    Model &m_model;
+    Data &m_data;
     std::unique_ptr<Factory_t> m_factory;
     OperatorFunction_t m_operatorFunction {};
     std::unique_ptr<Pipe_t>  m_pipe {};
 };
 
-template<class Model, class Request, class Error>
-class ModelAppender: public ModelOperator<Model, Request, typename Model::SourceItems_t, Error>
-{
-public:
-    using Result_t = typename Model::SourceItems_t;
-    using Factory_t = ::microcore::core::IJobFactory<Request, Result_t, Error>;
-    ModelAppender(Model &model, std::unique_ptr<Factory_t> factory)
-        : Parent_t(model, std::move(factory), OperatorFunction_t(&Model::append))
-    {
-    }
-private:
-    using Parent_t = ModelOperator<Model, Request, Result_t, Error>;
-    using OperatorFunction_t = std::function<void (Model &, Result_t &&)>;
-};
-
 }}
 
-#endif // MICROCORE_DATA_MODELOPERATOR_H
+#endif // MICROCORE_DATA_DATAOPERATOR_H

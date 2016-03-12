@@ -37,7 +37,9 @@ set(${PROJECT_NAME}_DATA_SRCS
     data/modeldata.h
     data/model.h
     data/datasourcemodel.h
-    data/modeloperator.h
+    data/dataoperator.h
+    data/modelappender.h
+    data/itemmodifier.h
 )
 
 set(${PROJECT_NAME}_QT_SRCS
