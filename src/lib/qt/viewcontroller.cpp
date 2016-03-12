@@ -77,16 +77,18 @@ void microcore::qt::ViewController::onFinish()
 {
     Q_ASSERT(m_status == Busy);
     setStatus(Idle);
+    Q_EMIT finished();
 }
 
-void ViewController::onError(const ViewController::Error_t &error)
+void ViewController::onError(const ViewController::Error_t &errorValue)
 {
     Q_ASSERT(m_status == Busy);
     setStatus(Error);
-    if (m_errorMessage != error.message()) {
-        m_errorMessage = error.message();
+    if (m_errorMessage != errorValue.message()) {
+        m_errorMessage = errorValue.message();
         Q_EMIT errorMessageChanged();
     }
+    Q_EMIT error();
 }
 
 void ViewController::onInvalidation(ViewController::Executor_t &source)

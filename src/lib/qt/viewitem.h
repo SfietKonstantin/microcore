@@ -55,6 +55,10 @@ public:
     {
         return m_controller;
     }
+    QObject * item() const override final
+    {
+        return m_data.get();
+    }
     void setController(QObject *controllerObject) override final
     {
         Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);

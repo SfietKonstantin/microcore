@@ -90,7 +90,7 @@ protected:
 private:
     void onStart() override final;
     void onFinish() override final;
-    void onError(const Error_t &error) override final;
+    void onError(const Error_t &errorValue) override final;
     void onInvalidation(Executor_t &source) override final;
     void setStatus(Status status);
     Status m_status {Idle};
