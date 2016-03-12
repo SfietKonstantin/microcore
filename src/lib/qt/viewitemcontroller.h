@@ -36,7 +36,7 @@
 
 namespace microcore { namespace qt {
 
-template<class Data>
+template<class Item>
 class ViewItemController: public ViewController
 {
 public:
@@ -44,7 +44,7 @@ public:
         : ViewController(parent)
     {
     }
-    virtual const Data & data() = 0;
+    virtual Item & item() = 0;
 };
 
 }}
