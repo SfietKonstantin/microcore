@@ -92,7 +92,7 @@ private:
         if (m_controller == nullptr) {
             m_data.reset();
         } else {
-            m_data.reset(new DataObject(m_controller->data()));
+            m_data.reset(new DataObject(Data(m_controller->data())));
         }
         Q_EMIT itemChanged();
     }

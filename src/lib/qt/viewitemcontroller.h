@@ -44,7 +44,7 @@ public:
         : ViewController(parent)
     {
     }
-    virtual Data & data() = 0;
+    virtual const Data & data() = 0;
 };
 
 }}
