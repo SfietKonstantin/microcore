@@ -40,6 +40,11 @@ ViewController::ViewController(QObject *parent)
 
 ViewController::~ViewController()
 {
+    using namespace std::placeholders;
+    using pair_t = std::pair<Executor_t * const, std::unique_ptr<Executor_t>>;
+    std::for_each(std::begin(m_executors), std::end(m_executors), [this](pair_t &pair) {
+        pair.second->removeListener(*this);
+    });
 }
 
 void ViewController::classBegin()
@@ -64,7 +69,9 @@ ViewController::Executor_t & ViewController::addExecutor(std::unique_ptr<Executo
 {
     auto result = m_executors.emplace(executor.get(), std::move(executor));
     Q_ASSERT(result.second); // Should be added
-    return *(result.first->second);
+    ViewController::Executor_t &returned {*(result.first->second)};
+    returned.addListener(*this);
+    return returned;
 }
 
 void ViewController::onStart()

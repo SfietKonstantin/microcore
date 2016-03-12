@@ -39,7 +39,6 @@ public:
     void sendError(Error &&error)
     {
         m_onError(std::move(error));
-        m_job.reset();
     }
 private:
     template<class T>
@@ -48,7 +47,6 @@ private:
     void onResult(Result &&result)
     {
         m_onResult(std::move(result));
-        m_job.reset();
     }
     const IJobFactory<Request, Result, Error> &m_factory;
     std::unique_ptr<IJob<Result, Error>> m_job {};
