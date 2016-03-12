@@ -72,7 +72,7 @@ protected:
     using Error_t = ::microcore::error::Error;
     using Executor_t = ::microcore::core::Executor<Error_t>;
     explicit ViewController(QObject *parent = nullptr);
-    void addExecutor(std::unique_ptr<Executor_t> executor);
+    Executor_t & addExecutor(std::unique_ptr<Executor_t> executor);
     template<class Executor, class Request>
     bool start(Executor &executor, Request &&request)
     {

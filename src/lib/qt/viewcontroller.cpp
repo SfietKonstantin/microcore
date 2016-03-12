@@ -60,9 +60,11 @@ QString ViewController::errorMessage() const
     return m_errorMessage;
 }
 
-void ViewController::addExecutor(std::unique_ptr<Executor_t> executor)
+ViewController::Executor_t & ViewController::addExecutor(std::unique_ptr<Executor_t> executor)
 {
-    m_executors.emplace(executor.get(), std::move(executor));
+    auto result = m_executors.emplace(executor.get(), std::move(executor));
+    Q_ASSERT(result.second); // Should be added
+    return *(result.first->second);
 }
 
 void ViewController::onStart()
