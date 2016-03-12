@@ -53,6 +53,7 @@ class ${name}Object : public QObject
     % endfor
 public:
     explicit ${name}Object(QObject *parent = nullptr);
+    explicit ${name}Object(${name} &&data, QObject *parent = nullptr);
     DISABLE_COPY_DISABLE_MOVE(${name}Object);
     % for property in properties:
     ${property["type"]} ${property["getter"]}() const;

@@ -40,6 +40,11 @@ ${name}Object::${name}Object(QObject *parent)
 {
 }
 
+${name}Object::${name}Object(${name} &&data, QObject *parent)
+    : QObject(parent), m_data(std::move(data))
+{
+}
+
 % for property in properties:
 ${property["type"]} ${name}Object::${property["getter"]}() const
 {
