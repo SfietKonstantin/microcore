@@ -58,6 +58,7 @@ set(${PROJECT_NAME}_SRCS
     tst_model.cpp
     tst_datasourcemodel.cpp
     tst_modelappender.cpp
+    tst_itemmodifier.cpp
     tst_qtviewmodel.cpp
 )
 

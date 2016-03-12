@@ -29,32 +29,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_ITEMMODIFIER_H
-#define MICROCORE_DATA_ITEMMODIFIER_H
+#ifndef MOCKITEMMODIFIERLISTENER_H
+#define MOCKITEMMODIFIERLISTENER_H
 
-#include "data/dataoperator.h"
+#include <gmock/gmock.h>
+#include "data/itemmodifier.h"
 
 namespace microcore { namespace data {
 
 template<class Item, class Request, class Error>
-class ItemModifier: public DataOperator<Item, Request, Item, Error>
+class MockItemModifierListener: public ItemModifier<Item, Request, Error>::Listener_t
 {
 public:
-    using Factory_t = ::microcore::core::IJobFactory<Request, Item, Error>;
-    ItemModifier(Item &item, std::unique_ptr<Factory_t> factory)
-        : Parent_t(item, std::move(factory), OperatorFunction_t(&This_t::modify))
+    ~MockItemModifierListener()
     {
+        onDestroyed();
     }
-private:
-    static void modify(Item &dest, Item &&source)
-    {
-        dest = std::move(source);
-    }
-    using Parent_t = DataOperator<Item, Request, Item, Error>;
-    using This_t = ItemModifier<Item, Request, Error>;
-    using OperatorFunction_t = std::function<void (Item &, Item &&)>;
+    MOCK_METHOD0_T(onDestroyed, void ());
+    MOCK_METHOD0_T(onStart, void ());
+    MOCK_METHOD0_T(onFinish, void ());
+    MOCK_METHOD1_T(onError, void (const Error &error));
+    MOCK_METHOD1_T(onInvalidation, void (typename ItemModifier<Item, Request, Error>::Executor_t &source));
 };
 
 }}
 
-#endif // MICROCORE_DATA_ITEMMODIFIER_H
+#endif // MOCKITEMMODIFIERLISTENER_H

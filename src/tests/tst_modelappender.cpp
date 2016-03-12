@@ -109,62 +109,62 @@ public:
 
 }
 
-class TstModeOperator: public Test
+class TstModelAppender: public Test
 {
 protected:
     void SetUp()
     {
         std::unique_ptr<Factory_t> appenderFactory (new Factory_t());
-        m_appenderFactory = appenderFactory.get();
+        m_factory = appenderFactory.get();
 
         m_model.reset(new TestViewModel());
         m_appender.reset(new TestModelAppender(*m_model, std::move(appenderFactory)));
-        EXPECT_CALL(m_appenderListener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModeOperator *>(this), &TstModeOperator::invalidateOnDestroyed));
-        ON_CALL(m_appenderListener, onStart()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onStart));
-        ON_CALL(m_appenderListener, onFinish()).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onFinish));
-        ON_CALL(m_appenderListener, onError(_)).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onError));
-        ON_CALL(m_appenderListener, onInvalidation(_)).WillByDefault(Invoke(&m_appenderListenerData, &ListenerData::onInvalidation));
+        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModelAppender *>(this), &TstModelAppender::invalidateOnDestroyed));
+        ON_CALL(m_listener, onStart()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onStart));
+        ON_CALL(m_listener, onFinish()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onFinish));
+        ON_CALL(m_listener, onError(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onError));
+        ON_CALL(m_listener, onInvalidation(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
     }
     void invalidateOnDestroyed()
     {
         if (!m_invalidated) {
-            m_appender->removeListener(m_appenderListener);
+            m_appender->removeListener(m_listener);
         }
     }
     using Factory_t = NiceMock<MockJobFactory<int, TestViewModel::SourceItems_t, Error>>;
     std::unique_ptr<TestViewModel> m_model {};
-    Factory_t *m_appenderFactory {nullptr};
+    Factory_t *m_factory {nullptr};
     std::unique_ptr<TestModelAppender> m_appender {};
-    NiceMock<MockTestModelAppenderListener> m_appenderListener {};
-    ListenerData m_appenderListenerData {};
-    AppenderJob::OnResult_t m_appenderOnResult {};
-    AppenderJob::OnError_t m_appenderOnError {};
+    NiceMock<MockTestModelAppenderListener> m_listener {};
+    ListenerData m_listenerData {};
+    AppenderJob::OnResult_t m_onResult {};
+    AppenderJob::OnError_t m_onError {};
     bool m_invalidated {false};
 };
 
-TEST_F(TstModeOperator, TestSuccess)
+TEST_F(TstModelAppender, TestSuccess)
 {
     // Mock
-    EXPECT_CALL(*m_appenderFactory, mockCreate(_)).Times(0);
-    EXPECT_CALL(*m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
+    EXPECT_CALL(*m_factory, mockCreate(_)).Times(0);
+    EXPECT_CALL(*m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
-            m_appenderOnResult = onResult;
-            m_appenderOnError = onError;
+            m_onResult = onResult;
+            m_onError = onError;
         }));
         return returned;
     }));
-    m_appender->addListener(m_appenderListener);
+    m_appender->addListener(m_listener);
     m_model->append({Result(1), Result(2)});
 
     // Test
     EXPECT_TRUE(m_appender->start(1));
 
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Start);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
     EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
-    m_appenderOnResult({Result(3), Result(4), Result(5)});
+    m_onResult({Result(3), Result(4), Result(5)});
 
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Finish);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Finish);
     {
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
 
@@ -183,43 +183,43 @@ TEST_F(TstModeOperator, TestSuccess)
     }
 }
 
-TEST_F(TstModeOperator, TestError)
+TEST_F(TstModelAppender, TestError)
 {
     // Mock
-    EXPECT_CALL(*m_appenderFactory, mockCreate(_)).Times(0);
-    EXPECT_CALL(*m_appenderFactory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
+    EXPECT_CALL(*m_factory, mockCreate(_)).Times(0);
+    EXPECT_CALL(*m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
-            m_appenderOnResult = onResult;
-            m_appenderOnError = onError;
+            m_onResult = onResult;
+            m_onError = onError;
         }));
         return returned;
     }));
-    m_appender->addListener(m_appenderListener);
+    m_appender->addListener(m_listener);
 
     // Test
     EXPECT_TRUE(m_appender->start(1));
 
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Start);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
     EXPECT_TRUE(m_model->empty());
-    m_appenderOnError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
+    m_onError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
 
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_appenderListenerData.currentError.id(), "test");
-    EXPECT_EQ(m_appenderListenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_appenderListenerData.currentError.data(), QByteArray("Error data"));
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
+    EXPECT_EQ(m_listenerData.currentError.id(), "test");
+    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
+    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
 
     EXPECT_TRUE(m_model->empty());
 }
 
-TEST_F(TstModeOperator, TestBusy)
+TEST_F(TstModelAppender, TestBusy)
 {
     // Mock
-    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+    ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
-            m_appenderOnResult = onResult;
-            m_appenderOnError = onError;
+            m_onResult = onResult;
+            m_onError = onError;
         }));
         return returned;
     }));
@@ -227,58 +227,58 @@ TEST_F(TstModeOperator, TestBusy)
     // Test
     EXPECT_TRUE(m_appender->start(1));
     EXPECT_FALSE(m_appender->start(2));
-    m_appenderOnResult({Result(1), Result(2)});
+    m_onResult({Result(1), Result(2)});
     EXPECT_TRUE(m_appender->start(3));
 }
 
-TEST_F(TstModeOperator, TestListenerDelayAddStart)
+TEST_F(TstModelAppender, TestListenerDelayAddStart)
 {
     // Mock
-    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+    ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
-            m_appenderOnResult = onResult;
-            m_appenderOnError = onError;
+            m_onResult = onResult;
+            m_onError = onError;
         }));
         return returned;
     }));
 
     // Test
     EXPECT_TRUE(m_appender->start(1));
-    m_appender->addListener(m_appenderListener);
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Start);
+    m_appender->addListener(m_listener);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
 }
 
-TEST_F(TstModeOperator, TestListenerDelayAddError)
+TEST_F(TstModelAppender, TestListenerDelayAddError)
 {
     // Mock
-    ON_CALL(*m_appenderFactory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
+    ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
         EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
-            m_appenderOnResult = onResult;
-            m_appenderOnError = onError;
+            m_onResult = onResult;
+            m_onError = onError;
         }));
         return returned;
     }));
 
     // Test
     EXPECT_TRUE(m_appender->start(1));
-    m_appenderOnError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
-    m_appender->addListener(m_appenderListener);
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_appenderListenerData.currentError.id(), "test");
-    EXPECT_EQ(m_appenderListenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_appenderListenerData.currentError.data(), QByteArray("Error data"));
+    m_onError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
+    m_appender->addListener(m_listener);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
+    EXPECT_EQ(m_listenerData.currentError.id(), "test");
+    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
+    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
 }
 
-TEST_F(TstModeOperator, TestListenerInvalidation)
+TEST_F(TstModelAppender, TestListenerInvalidation)
 {
-    m_appender->addListener(m_appenderListener);
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::None);
+    m_appender->addListener(m_listener);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
 
     TestModelAppender::Executor_t *oldAppender = m_appender.get();
     m_appender.reset();
-    EXPECT_EQ(m_appenderListenerData.currentType, ListenerData::Type::Invalidation);
-    EXPECT_EQ(m_appenderListenerData.invalidatedSource, oldAppender);
+    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Invalidation);
+    EXPECT_EQ(m_listenerData.invalidatedSource, oldAppender);
     m_invalidated = true;
 }
