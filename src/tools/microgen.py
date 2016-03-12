@@ -32,14 +32,15 @@ class BeanGenerator:
             template = Template(filename=_get_tpl("bean.cpp.tpl"))
             cpp.write(template.render(**self.data))
             cpp.close()
-        with open(self.output + self.data["name"].lower() + "object.h", 'w') as qth:
-            template = Template(filename=_get_tpl("beanobject.h.tpl"))
-            qth.write(template.render(**self.data))
-            qth.close()
-        with open(self.output + self.data["name"].lower() + "object.cpp", 'w') as qtcpp:
-            template = Template(filename=_get_tpl("beanobject.cpp.tpl"))
-            qtcpp.write(template.render(**self.data))
-            qtcpp.close()
+        if not "no_qt" in self.data or self.data["no_qt"] == False:
+            with open(self.output + self.data["name"].lower() + "object.h", 'w') as qth:
+                template = Template(filename=_get_tpl("beanobject.h.tpl"))
+                qth.write(template.render(**self.data))
+                qth.close()
+            with open(self.output + self.data["name"].lower() + "object.cpp", 'w') as qtcpp:
+                template = Template(filename=_get_tpl("beanobject.cpp.tpl"))
+                qtcpp.write(template.render(**self.data))
+                qtcpp.close()
     
     def _check(self):
         if not "name" in data:
