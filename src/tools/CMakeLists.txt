@@ -11,4 +11,10 @@ set(${PROJECT_NAME}_SRCS
     factoryjson.cpp.tpl
 )
 
+add_custom_target(${PROJECT_NAME}
+    DEPENDS ${${PROJECT_NAME}_SRCS}
+    SOURCES ${${PROJECT_NAME}_SRCS}
+    COMMENT Prepare microgen
+)
+
 include(cmake/MicrogenMacros.cmake)

@@ -16,8 +16,8 @@ function(microgen_bean outfiles)
         set(hfile ${outdir}/${outfile}.h)
         set(cppfile ${outdir}/${outfile}.cpp)
         add_custom_command(OUTPUT ${hfile} ${cppfile}
-                           COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/src/tools/microgen.py bean ${it} ${outdir}
-                           DEPENDS ${it} ${microgen_SRCS}
+                           COMMAND ${PYTHON_EXECUTABLE} ${microgen_SOURCE_DIR}/microgen.py bean ${it} ${outdir}
+                           DEPENDS ${it} microgen
                            ${CMAKE_BUILD_DIR})
         list(APPEND ${outfiles} ${hfile} ${cppfile})
     endforeach()
@@ -33,8 +33,8 @@ function(microgen_qtbean outfiles)
         set(hfile ${outdir}/${outfile}object.h)
         set(cppfile ${outdir}/${outfile}object.cpp)
         add_custom_command(OUTPUT ${hfile} ${cppfile}
-                           COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/src/tools/microgen.py qtbean ${it} ${outdir}
-                           DEPENDS ${it} ${microgen_SRCS}
+                           COMMAND ${PYTHON_EXECUTABLE} ${microgen_SOURCE_DIR}/microgen.py qtbean ${it} ${outdir}
+                           DEPENDS ${it} microgen
                            ${CMAKE_BUILD_DIR})
         qt5_wrap_cpp(mockfile ${hfile})
         list(APPEND ${outfiles} ${hfile} ${cppfile} ${mockfile})
@@ -52,8 +52,8 @@ function(microgen_factory outfiles)
         set(hfile ${outdir}/${outfile}requestfactory.h)
         set(cppfile ${outdir}/${outfile}requestfactory.cpp)
         add_custom_command(OUTPUT ${thfile} ${hfile} ${cppfile}
-                           COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_SOURCE_DIR}/src/tools/microgen.py factory ${it} ${outdir}
-                           DEPENDS ${it} ${microgen_SRCS}
+                           COMMAND ${PYTHON_EXECUTABLE} ${microgen_SOURCE_DIR}/microgen.py factory ${it} ${outdir}
+                           DEPENDS ${it} microgen
                            ${CMAKE_BUILD_DIR})
         list(APPEND ${outfiles} ${hfile} ${cppfile})
     endforeach()
