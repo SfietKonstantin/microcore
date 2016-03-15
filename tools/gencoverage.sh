@@ -14,5 +14,6 @@ lcov -r lcov.da "*qrc*" -o lcov.da
 lcov -r lcov.da "/usr/include/*" -o lcov.da
 lcov -r lcov.da "*3rdparty*" -o lcov.da
 lcov -r lcov.da "tst*" -o lcov.da
+lcov -r lcov.da "*microgen*" -o lcov.da
 genhtml -o report --function-coverage -t "microcore" --demangle-cpp lcov.da
 mv lcov.da report/lcov.da

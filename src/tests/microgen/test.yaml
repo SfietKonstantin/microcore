@@ -1,0 +1,19 @@
+module: test
+name: Test
+source: json
+properties:
+    - name: id
+      type: QString
+      access: c
+      json_path: id_str
+
+    - name: name
+      type: QString
+      access: c
+      json_path: props_test/name
+
+    - name: description
+      type: QString
+      access: c
+      json_path: props/props/description
+      json_optional: true

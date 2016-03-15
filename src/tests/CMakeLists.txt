@@ -19,6 +19,11 @@ include_directories(
     ${gmock_SOURCE_DIR}/include
 )
 
+# Microgen
+microgen_bean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
+microgen_qtbean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
+microgen_factory(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
+
 set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_executor.cpp
     includes/tst_core_globals.cpp
@@ -61,11 +66,13 @@ set(${PROJECT_NAME}_SRCS
     tst_modelappender.cpp
     tst_itemmodifier.cpp
     tst_qtviewmodel.cpp
+    tst_microgen.cpp
 )
 
 add_executable(${PROJECT_NAME}
     ${${PROJECT_NAME}_INCLUDES}
     ${${PROJECT_NAME}_SRCS}
+    ${${PROJECT_NAME}_MICROGEN_SRCS}
 )
 qt5_use_modules(${PROJECT_NAME} Core Network Qml Test)
 target_link_libraries(${PROJECT_NAME}

@@ -14,9 +14,11 @@ class MicroGenException(Exception):
         return repr(self.value)
 
 class BeanGenerator:
-    def __init__(self, data, output):
+    def __init__(self, data, input, outdir, qt):
         self.data = data
-        self.output = output
+        self.input = input
+        self.outdir = outdir
+        self.qt = qt
                 
     def render(self):
         self._check()
@@ -24,23 +26,28 @@ class BeanGenerator:
         self._gen_includes()
         self._enrich_properties()
         
-        with open(self.output + self.data["name"].lower() + ".h", 'w') as h:
-            template = Template(filename=_get_tpl("bean.h.tpl"))
-            h.write(template.render(**self.data))
-            h.close()
-        with open(self.output + self.data["name"].lower() + ".cpp", 'w') as cpp:
-            template = Template(filename=_get_tpl("bean.cpp.tpl"))
-            cpp.write(template.render(**self.data))
-            cpp.close()
-        if not "no_qt" in self.data or self.data["no_qt"] == False:
-            with open(self.output + self.data["name"].lower() + "object.h", 'w') as qth:
-                template = Template(filename=_get_tpl("beanobject.h.tpl"))
-                qth.write(template.render(**self.data))
-                qth.close()
-            with open(self.output + self.data["name"].lower() + "object.cpp", 'w') as qtcpp:
-                template = Template(filename=_get_tpl("beanobject.cpp.tpl"))
-                qtcpp.write(template.render(**self.data))
-                qtcpp.close()
+        outputFile = os.path.splitext(os.path.basename(self.input))[0]
+        if not self.qt:
+            with open(os.path.join(self.outdir, outputFile + ".h"), 'w') as h:
+                template = Template(filename=_get_tpl("bean.h.tpl"))
+                h.write(template.render(**self.data))
+                h.close()
+            with open(os.path.join(self.outdir, outputFile + ".cpp"), 'w') as cpp:
+                template = Template(filename=_get_tpl("bean.cpp.tpl"))
+                cpp.write(template.render(**self.data))
+                cpp.close()
+        else:
+            if not "no_qt" in self.data or self.data["no_qt"] == False:
+                with open(os.path.join(self.outdir, outputFile + "object.h"), 'w') as qth:
+                    template = Template(filename=_get_tpl("beanobject.h.tpl"))
+                    qth.write(template.render(**self.data))
+                    qth.close()
+                with open(os.path.join(self.outdir, outputFile + "object.cpp"), 'w') as qtcpp:
+                    template = Template(filename=_get_tpl("beanobject.cpp.tpl"))
+                    qtcpp.write(template.render(**self.data))
+                    qtcpp.close()
+            else:
+                raise MicroGenException("Cannot generate Qt beans with \"no_qt\"")
     
     def _check(self):
         if not "name" in data:
@@ -125,9 +132,10 @@ class BeanGenerator:
                 property["setter"] = self._make_setter(property["name"])
 
 class JsonFactoryGenerator:
-    def __init__(self, data, output):
+    def __init__(self, data, input, outdir):
         self.data = data
-        self.output = output
+        self.input = input
+        self.outdir = outdir
                 
     def render(self):
         self._check()
@@ -135,17 +143,18 @@ class JsonFactoryGenerator:
         self._enrich_data()
         self._enrich_properties()
         
-        with open(self.output + self.data["name"].lower() + "types.h", 'w') as th:
+        outputFile = os.path.splitext(os.path.basename(self.input))[0]
+        with open(os.path.join(self.outdir, outputFile + "types.h"), 'w') as th:
             template = Template(filename=_get_tpl("types.h.tpl"))
             th.write(template.render(**self.data))
             th.close()
             
-        with open(self.output + self.data["name"].lower() + "requestfactory.h", 'w') as fh:
+        with open(os.path.join(self.outdir, outputFile + "requestfactory.h"), 'w') as fh:
             template = Template(filename=_get_tpl("factory.h.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
     
-        with open(self.output + self.data["name"].lower() + "requestfactory.cpp", 'w') as fh:
+        with open(os.path.join(self.outdir, outputFile + "requestfactory.cpp"), 'w') as fh:
             template = Template(filename=_get_tpl("factoryjson.cpp.tpl"))
             fh.write(template.render(**self.data))
             fh.close()
@@ -228,22 +237,26 @@ def get_data(input):
     f.close()
     return data
 
-def generate_bean(data, output):
-    generator = BeanGenerator(data, output)
+def generate_bean(data, input, outdir, qt):
+    generator = BeanGenerator(data, input, outdir, qt)
     generator.render()
 
-def generate_factory(data, output):
-    generator = JsonFactoryGenerator(data, output)
+def generate_factory(data, input, outdir):
+    generator = JsonFactoryGenerator(data, input, outdir)
     generator.render()
 
 parser = argparse.ArgumentParser(description='microgen.py: generate boilerplate code for microcore')
-parser.add_argument("type", choices=["bean", "factory"], help="type of class to generate.")
+parser.add_argument("type", choices=["bean", "qtbean", "factory"], help="type of class to generate.")
 parser.add_argument("input", help="input YAML file")
+parser.add_argument("outdir", help="output directory")
 args = parser.parse_args()
 
-output = ""
-data = get_data(args.input)
+input = args.input
+outdir = args.outdir
+data = get_data(input)
 if args.type == "bean":
-    generate_bean(data, output)
+    generate_bean(data, input, outdir, False)
+elif args.type == "qtbean":
+    generate_bean(data, input, outdir, True)
 elif args.type == "factory":
-    generate_factory(data, output)
+    generate_factory(data, input, outdir)
