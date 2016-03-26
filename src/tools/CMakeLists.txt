@@ -2,6 +2,8 @@ project(microgen)
 
 set(${PROJECT_NAME}_SRCS
     microgen.py
+    transformer.py
+    exception.py
     bean.h.tpl
     bean.cpp.tpl
     beanobject.h.tpl
