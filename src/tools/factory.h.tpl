@@ -46,7 +46,7 @@ class ${name}RequestFactory final : public ::microcore::core::IJobFactory<${name
 public:
     explicit ${name}RequestFactory() = default;
     DISABLE_COPY_DISABLE_MOVE(${name}RequestFactory);
-    std::unique_ptr<${name}Job> create(${name}Request &&request) const override;    
+    std::unique_ptr<${name}Job> create(${name}Request &&request) const override;
 };
 
 }}
