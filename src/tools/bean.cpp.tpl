@@ -58,6 +58,21 @@ ${name}::${name}
 {
 }
 
+bool ${name}::operator==(const ${name} &other) const
+{
+    % for i, property in enumerate(properties):
+    if (m_${property["name"]} != other.m_${property["name"]}) {
+        return false;
+    }
+    % endfor
+    return true;
+}
+
+bool ${name}::operator!=(const ${name} &other) const
+{
+    return !(*this == other);
+}
+
 % for property in properties:
 ${property["nested_type"]} ${name}::${property["getter"]}() const
 {

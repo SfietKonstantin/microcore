@@ -16,6 +16,8 @@ ${nested_class["h_nested"]}
         %endfor
     );
     DEFAULT_COPY_DEFAULT_MOVE(${name});
+    bool operator==(const ${name} &other) const;
+    bool operator!=(const ${name} &other) const;
     % for property in properties:
     ${property["type"]} ${property["getter"]}() const;
     % if property["access"] == "rw":

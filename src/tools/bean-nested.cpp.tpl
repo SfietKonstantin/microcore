@@ -21,6 +21,21 @@ ${nested_name}::${name}
 {
 }
 
+bool ${nested_name}::operator==(const ${name} &other) const
+{
+    % for i, property in enumerate(properties):
+    if (m_${property["name"]} != other.m_${property["name"]}) {
+        return false;
+    }
+    % endfor
+    return true;
+}
+
+bool ${nested_name}::operator!=(const ${name} &other) const
+{
+    return !(*this == other);
+}
+
 % for property in properties:
 ${property["nested_type"]} ${nested_name}::${property["getter"]}() const
 {

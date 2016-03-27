@@ -5,9 +5,13 @@ set(${PROJECT_NAME}_SRCS
     transformer.py
     exception.py
     bean.h.tpl
+    bean-nested.h.tpl
     bean.cpp.tpl
+    bean-nested.cpp.tpl
     beanobject.h.tpl
+    beanobject-nested.h.tpl
     beanobject.cpp.tpl
+    beanobject-nested.cpp.tpl
     types.h.tpl
     factory.h.tpl
     factoryjson.cpp.tpl

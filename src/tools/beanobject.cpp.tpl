@@ -35,33 +35,55 @@
 
 namespace microcore { namespace ${module} { namespace qt {
 
+% for nested_class in classes:
+${nested_class["c_nested"]}
+% endfor
 ${name}Object::${name}Object(QObject *parent)
     : QObject(parent)
 {
+    % for property in properties:
+    % if property["is_object"]:
+    m_${property["name"]} = new ${property["qt_class"]}(this);
+    % endif
+    % endfor
 }
 
 ${name}Object::${name}Object(${name} &&data, QObject *parent)
     : QObject(parent), m_data(std::move(data))
 {
+    % for property in properties:
+    % if property["is_object"]:
+    m_${property["name"]} = new ${property["qt_class"]}(m_data.${property["getter"]}(), this);
+    % endif
+    % endfor
 }
 
 % for property in properties:
-${property["type"]} ${name}Object::${property["getter"]}() const
+${property["qt_type"]} ${name}Object::${property["getter"]}() const
 {
+    % if property["is_object"]:
+    return m_${property["name"]};
+    % else:
     return m_data.${property["getter"]}();
+    % endif
 }
 
 % endfor
-const ::microcore::${module}::${name} & ${name}Object::data() const
+const ${name} & ${name}Object::data() const
 {
     return m_data;
 }
 
-void ${name}Object::update(::microcore::${module}::${name} &&data)
+void ${name}Object::update(${name} &&data)
 {
 % if not const:
-    ::microcore::${module}::${name} oldData {m_data};
+    ${name} oldData {m_data};
     m_data = std::move(data);
+    % for property in properties:
+    % if property["is_object"]:
+    m_${property["name"]}->update(m_data.${property["getter"]}());
+    % endif
+    % endfor
     % for property in properties:
     % if property["access"] != "c":
     if (oldData.${property["getter"]}() != data.${property["getter"]}()) {
@@ -73,5 +95,5 @@ void ${name}Object::update(::microcore::${module}::${name} &&data)
     Q_UNUSED(data);
 % endif
 }
-    
+
 }}}

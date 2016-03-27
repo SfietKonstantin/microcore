@@ -4,8 +4,9 @@ from generator import Generator, BeanGenerator
 
 class TestGenerator(TestCase):
     def test__indent(self):
-        self.assertEqual(Generator._indent("hello\nworld"), "    hello\n    world")
-        self.assertEqual(Generator._indent("hello\nworld\n"), "    hello\n    world")
+        generator = Generator({}, None, None)
+        self.assertEqual(generator._indent("hello\nworld"), "    hello\n    world")
+        self.assertEqual(generator._indent("hello\nworld\n"), "    hello\n    world")
 
     def test__recursive_fill1(self):
         in_data = {
@@ -90,6 +91,8 @@ class TestGenerator(TestCase):
             QString &&sub_property
         );
         DEFAULT_COPY_DEFAULT_MOVE(Test);
+        bool operator==(const Test &other) const;
+        bool operator!=(const Test &other) const;
         QString sub_property() const;
     private:
         QString m_sub_property {};
@@ -100,6 +103,19 @@ class TestGenerator(TestCase):
 )
     : m_sub_property {std::move(sub_property)}
 {
+}
+
+bool name_test::Test::operator==(const Test &other) const
+{
+    if (m_sub_property != other.m_sub_property) {
+        return false;
+    }
+    return true;
+}
+
+bool name_test::Test::operator!=(const Test &other) const
+{
+    return !(*this == other);
 }
 
 QString name_test::Test::sub_property() const

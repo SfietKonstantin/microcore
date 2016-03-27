@@ -102,36 +102,38 @@ class Transformer:
         for bean_property in self.in_data["properties"]:
             Transformer._recursive_check(bean_property, names, classes)
 
-    def _fill_property(self, bean_property, parent_class):
-        # type: (dict, str) -> dict
+    def _fill_property(self, bean_property, parent_classes):
+        # type: (dict, list) -> dict
         return {"name": bean_property["name"], "access": bean_property["access"]}
 
-    def _fill_properties(self, in_data, out_data, parent_class):
-        # type: (dict, dict, str) -> None
+    def _fill_properties(self, in_data, out_data, parent_classes):
+        # type: (dict, dict, list) -> None
         out_data["properties"] = []
         out_data["classes"] = []
         for bean_property in in_data["properties"]:
-            out_property = self._fill_property(bean_property, parent_class)
+            out_property = self._fill_property(bean_property, parent_classes)
             out_data["properties"].append(out_property)
         for bean_property in in_data["properties"]:
             if bean_property["type"] == "class":
-                out_class = self._fill_class(bean_property, parent_class)
+                out_class = self._fill_class(bean_property, parent_classes)
                 out_data["classes"].append(out_class)
 
-    def _fill_class(self, bean_property, parent_class):
-        # type: (dict, str) -> dict
+    def _fill_class(self, bean_property, parent_classes):
+        # type: (dict, list) -> dict
         returned = {
             "name": bean_property["class_name"],
-            "nested_name": parent_class + "::" + bean_property["class_name"]
+            "nested_name": "::".join(parent_classes) + "::" + bean_property["class_name"]
         }
-        self._fill_properties(bean_property, returned, parent_class + "::" + bean_property["class_name"])
+        new_parent_classes = list(parent_classes)
+        new_parent_classes.append(bean_property["class_name"])
+        self._fill_properties(bean_property, returned, new_parent_classes)
         return returned
 
     def _fill(self):
         # type: () -> None
         self.out_data["name"] = self.in_data["name"]
         self.out_data["module"] = self.in_data["module"]
-        self._fill_properties(self.in_data, self.out_data, self.in_data["name"])
+        self._fill_properties(self.in_data, self.out_data, [self.in_data["name"]])
 
     def generate(self):
         # type: () -> None
@@ -154,15 +156,15 @@ class BeanTransformer(Transformer, object):
                 return False
         return True
 
-    def _fill_property(self, bean_property, parent_class):
-        # type: (dict, str) -> dict
-        returned = super(BeanTransformer, self)._fill_property(bean_property, parent_class)
+    def _fill_property(self, bean_property, parent_classes):
+        # type: (dict, list) -> dict
+        returned = super(BeanTransformer, self)._fill_property(bean_property, parent_classes)
 
         bean_type = bean_property["type"]
         nested_type = bean_property["type"]
         if bean_property["type"] == "class":
             bean_type = bean_property["class_name"]
-            nested_type = parent_class + "::" + bean_type
+            nested_type = "::".join(parent_classes) + "::" + bean_type
 
         if "list" in bean_property and bean_property["list"]:
             bean_type = "%s<%s>" % (self.list_type, bean_type)
@@ -234,3 +236,22 @@ class QtBeanTransformer(BeanTransformer, object):
         super(QtBeanTransformer, self).__init__(in_data)
         self.list_type = "QList"
         self.list_include = "QList"
+
+    def _fill_class(self, bean_property, parent_classes):
+        # type: (dict, list) -> dict
+        returned = super(QtBeanTransformer, self)._fill_class(bean_property, parent_classes)
+        returned["name"] = "".join(parent_classes) + returned["name"]
+        return returned
+
+    def _fill_property(self, bean_property, parent_classes):
+        # type: (dict, list) -> dict
+        returned = super(QtBeanTransformer, self)._fill_property(bean_property, parent_classes)
+        if bean_property["type"] == "class":
+            returned["qt_class"] = "".join(parent_classes) + bean_property["class_name"] + "Object"
+            returned["qt_type"] = returned["qt_class"] + " *"
+            returned["is_object"] = True
+        else:
+            returned["qt_type"] = bean_property["type"]
+            returned["is_object"] = False
+        returned["nested_name"] = "::".join(parent_classes) + "::" + bean_property["name"]
+        return returned

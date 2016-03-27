@@ -214,6 +214,7 @@ class TestTransformer(TestCase):
             "classes": [
                 {
                     "name": "Test",
+                    "nested_name": "name_test::Test",
                     "properties": [
                         {
                             "name": "sub_property",
@@ -344,6 +345,7 @@ class TestBeanTransformer(TestCase):
             "classes": [
                 {
                     "name": "Test",
+                    "nested_name": "name_test::Test",
                     "const": True,
                     "properties": [
                         {

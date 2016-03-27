@@ -9,6 +9,7 @@ class Generator:
         self.outdir = outdir
         self.outfile = outfile
         self.data["outfile"] = outfile
+        self.indent = True
 
         self.h_template = None
         self.c_template = None
@@ -23,16 +24,18 @@ class Generator:
         # type: () -> None
         pass
 
-    @staticmethod
-    def _indent(text):
+    def _indent(self, text):
         # type: (str) -> str
-        return "    " + ("\n    ".join(text.strip().split("\n")))
+        if self.indent:
+            return "    " + ("\n    ".join(text.strip().split("\n")))
+        else:
+            return text
 
     def _recursive_fill_templates(self, data):
         # type: (dict) -> None
         for sub_class in data["classes"]:
             self._recursive_fill_templates(sub_class)
-            sub_class["h_nested"] = Generator._indent(self.h_nested_template.render(**sub_class))
+            sub_class["h_nested"] = self._indent(self.h_nested_template.render(**sub_class))
             sub_class["c_nested"] = self.c_nested_template.render(**sub_class)
 
     def _render(self):
@@ -64,3 +67,14 @@ class BeanGenerator(Generator, object):
         self.c_template = Template(filename=Generator._get_tpl(self.c_template_file))
         self.h_nested_template = Template(filename=Generator._get_tpl(self.h_nested_template_file))
         self.c_nested_template = Template(filename=Generator._get_tpl(self.c_nested_template_file))
+
+
+class QtBeanGenerator(BeanGenerator, object):
+    def __init__(self, data, outdir, parent_outfile):
+        super(QtBeanGenerator, self).__init__(data, outdir, parent_outfile + "object")
+        self.indent = False
+        self.data["parent_outfile"] = parent_outfile
+        self.h_template_file = "beanobject.h.tpl"
+        self.c_template_file = "beanobject.cpp.tpl"
+        self.h_nested_template_file = "beanobject-nested.h.tpl"
+        self.c_nested_template_file = "beanobject-nested.cpp.tpl"

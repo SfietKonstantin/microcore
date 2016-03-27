@@ -35,20 +35,21 @@
 #define MICROCORE_${module.upper()}_QT_${name.upper()}OBJECT_H
 
 #include <QObject>
-#include "${name.lower()}.h"
+#include "${parent_outfile}.h"
 
 namespace microcore { namespace ${module} { namespace qt {
 
+% for nested_class in classes:
+${nested_class["h_nested"]}
+% endfor
 class ${name}Object : public QObject
 {
     Q_OBJECT
     % for property in properties:
     % if property["access"] == "c":
-    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} CONSTANT)
-    % elif property["access"] == "r":
-    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
-    % elif property["access"] == "rw":
-    Q_PROPERTY(${property["type"]} ${property["name"]} READ ${property["getter"]} WRITE ${property["setter"]} NOTIFY ${property["name"]}Changed)
+    Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} CONSTANT)
+    % elif property["access"] == "r" or property["access"] == "rw":
+    Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
     % endif
     % endfor
 public:
@@ -56,10 +57,10 @@ public:
     explicit ${name}Object(${name} &&data, QObject *parent = nullptr);
     DISABLE_COPY_DISABLE_MOVE(${name}Object);
     % for property in properties:
-    ${property["type"]} ${property["getter"]}() const;
+    ${property["qt_type"]} ${property["getter"]}() const;
     % endfor
-    const ::microcore::${module}::${name} & data() const;
-    void update(::microcore::${module}::${name} &&data);
+    const ${name} & data() const;
+    void update(${name} &&data);
 % if not const:
 Q_SIGNALS:
     % for property in properties:
@@ -69,7 +70,12 @@ Q_SIGNALS:
     % endfor
 % endif
 private:
-    ::microcore::${module}::${name} m_data {};
+    ${name} m_data {};
+    % for property in properties:
+    % if property["is_object"]:
+    ${property["qt_class"]} *m_${property["name"]} {nullptr};
+    % endif
+    % endfor
 };
 
 }}}
