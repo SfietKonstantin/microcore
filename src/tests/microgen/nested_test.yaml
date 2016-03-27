@@ -1,0 +1,31 @@
+module: test
+name: NestedTest
+source: json
+properties:
+    - name: id
+      type: QString
+      access: c
+
+    - name: structure
+      type: class
+      class_name: NestedClassTest
+      access: rw
+      
+      properties:
+          - name: key
+            type: QString
+            access: c
+          
+          - name: value
+            type: QVariant
+            access: rw
+            
+          - name: additional_data
+            type: class
+            class_name: AdditionalData
+            access: c
+            
+            properties:
+                - name: id
+                  type: QString
+                  access: c

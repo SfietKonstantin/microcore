@@ -1,10 +1,9 @@
-import copy
 from exception import CheckException
 
 
 class Transformer:
     def __init__(self, in_data):
-        # type: (str) -> Transformer
+        # type: (dict) -> Transformer
         self.in_data = in_data
         self.out_data = {}
 
@@ -59,6 +58,36 @@ class Transformer:
         else:
             return "std::move(" + name + ")"
 
+    @staticmethod
+    def _recursive_check(bean_property, names, classes):
+        # type: (dict, list, list) -> None
+        if "name" not in bean_property:
+            raise CheckException("For %s \"name\" is a mandatory property field" % repr(bean_property))
+        if bean_property["name"] in names:
+            raise CheckException("For %s, name %s is already defined" % (repr(bean_property),
+                                                                         bean_property["name"]))
+        names.append(bean_property["name"])
+        if "type" not in bean_property:
+            raise CheckException("For %s \"type\" is a mandatory property field" % repr(bean_property))
+        if "access" not in bean_property:
+            raise CheckException("For %s \"access\" is a mandatory property field" % repr(bean_property))
+        if bean_property["access"] != "c" and bean_property["access"] != "r" and bean_property["access"] != "rw":
+            raise CheckException("For %s \"access\" must be c, r or rw" % repr(bean_property))
+
+        if bean_property["type"] == "class":
+            if "class_name" not in bean_property:
+                raise CheckException("For %s \"class_name\" is a mandatory property field" % repr(bean_property))
+            if "properties" not in bean_property:
+                raise CheckException("For %s \"properties\" is a mandatory property field" % repr(bean_property))
+            if bean_property["class_name"] in classes:
+                raise CheckException("For %s, type %s is already defined" % (repr(bean_property),
+                                                                             bean_property["class_name"]))
+            classes.append(bean_property["class_name"])
+            sub_names = []
+            sub_classes = []
+            for sub_bean_property in bean_property["properties"]:
+                Transformer._recursive_check(sub_bean_property, sub_names, sub_classes)
+
     def _check(self):
         # type: () -> None
         if "name" not in self.in_data:
@@ -67,28 +96,42 @@ class Transformer:
             raise CheckException("\"module\" is a mandatory field")
         if "properties" not in self.in_data:
             raise CheckException("\"properties\" is a mandatory field")
-        for bean_property in self.in_data["properties"]:
-            if "name" not in bean_property:
-                raise CheckException("For %s \"name\" is a mandatory property field" % repr(bean_property))
-            if "type" not in bean_property:
-                raise CheckException("For %s \"type\" is a mandatory property field" % repr(bean_property))
-            if "access" not in bean_property:
-                raise CheckException("For %s \"access\" is a mandatory property field" % repr(bean_property))
-            if bean_property["access"] != "c" and bean_property["access"] != "r" and bean_property["access"] != "rw":
-                raise CheckException("For %s \"access\" must be c, r or rw" % repr(bean_property))
 
-    def _fill_property(self, bean_property):
-        # type: (dict) -> dict
+        names = []
+        classes = []
+        for bean_property in self.in_data["properties"]:
+            Transformer._recursive_check(bean_property, names, classes)
+
+    def _fill_property(self, bean_property, parent_class):
+        # type: (dict, str) -> dict
         return {"name": bean_property["name"], "access": bean_property["access"]}
+
+    def _fill_properties(self, in_data, out_data, parent_class):
+        # type: (dict, dict, str) -> None
+        out_data["properties"] = []
+        out_data["classes"] = []
+        for bean_property in in_data["properties"]:
+            out_property = self._fill_property(bean_property, parent_class)
+            out_data["properties"].append(out_property)
+        for bean_property in in_data["properties"]:
+            if bean_property["type"] == "class":
+                out_class = self._fill_class(bean_property, parent_class)
+                out_data["classes"].append(out_class)
+
+    def _fill_class(self, bean_property, parent_class):
+        # type: (dict, str) -> dict
+        returned = {
+            "name": bean_property["class_name"],
+            "nested_name": parent_class + "::" + bean_property["class_name"]
+        }
+        self._fill_properties(bean_property, returned, parent_class + "::" + bean_property["class_name"])
+        return returned
 
     def _fill(self):
         # type: () -> None
         self.out_data["name"] = self.in_data["name"]
         self.out_data["module"] = self.in_data["module"]
-        self.out_data["properties"] = []
-        for bean_property in self.in_data["properties"]:
-            out_property = self._fill_property(bean_property)
-            self.out_data["properties"].append(out_property)
+        self._fill_properties(self.in_data, self.out_data, self.in_data["name"])
 
     def generate(self):
         # type: () -> None
@@ -98,31 +141,39 @@ class Transformer:
 
 class BeanTransformer(Transformer, object):
     def __init__(self, in_data):
-        # type: (str) -> BeanTransformer
+        # type: (dict) -> BeanTransformer
         super(BeanTransformer, self).__init__(in_data)
         self.list_type = "std::vector"
         self.list_include = "vector"
 
-    def _is_const(self):
-        # type: () -> bool
-        for bean_property in self.in_data["properties"]:
+    @staticmethod
+    def _is_const(out_data):
+        # type: (dict) -> bool
+        for bean_property in out_data["properties"]:
             if bean_property["access"] != "c":
                 return False
         return True
 
-    def _fill_property(self, bean_property):
-        # type: (dict) -> dict
-        returned = super(BeanTransformer, self)._fill_property(bean_property)
+    def _fill_property(self, bean_property, parent_class):
+        # type: (dict, str) -> dict
+        returned = super(BeanTransformer, self)._fill_property(bean_property, parent_class)
+
+        bean_type = bean_property["type"]
+        nested_type = bean_property["type"]
+        if bean_property["type"] == "class":
+            bean_type = bean_property["class_name"]
+            nested_type = parent_class + "::" + bean_type
 
         if "list" in bean_property and bean_property["list"]:
-            returned["type"] = "%s<%s>" % (self.list_type, bean_property["type"])
-        else:
-            returned["type"] = bean_property["type"]
+            bean_type = "%s<%s>" % (self.list_type, bean_type)
+            nested_type = "%s<%s>" % (self.list_type, nested_type)
 
-        returned["getter"] = self._make_getter(returned["type"], bean_property["name"])
-        returned["initial_value"] = self._make_initial_value(returned["type"])
-        returned["setter_type"] = self._make_setter_type(returned["type"])
-        returned["setter_impl"] = self._make_setter_impl(returned["type"], bean_property["name"])
+        returned["type"] = bean_type
+        returned["nested_type"] = nested_type
+        returned["getter"] = self._make_getter(bean_type, bean_property["name"])
+        returned["initial_value"] = self._make_initial_value(bean_type)
+        returned["setter_type"] = self._make_setter_type(bean_type)
+        returned["setter_impl"] = self._make_setter_impl(bean_type, bean_property["name"])
         if bean_property["access"] == "rw":
             returned["setter"] = self._make_setter(bean_property["name"])
         return returned
@@ -139,23 +190,38 @@ class BeanTransformer(Transformer, object):
                 return True
         return False
 
+    @staticmethod
+    def _recursive_gen_includes(bean_property, includes):
+        # type: (dict, list) -> None
+        if BeanTransformer._is_qt_type(bean_property["type"]):
+            if bean_property["type"] not in includes:
+                includes.append(bean_property["type"])
+
+        if bean_property["type"] == "class":
+            for sub_bean_property in bean_property["properties"]:
+                BeanTransformer._recursive_gen_includes(sub_bean_property, includes)
+
     def _gen_includes(self):
         # type: () -> None
         includes = []
         for bean_property in self.in_data["properties"]:
-            if BeanTransformer._is_qt_type(bean_property["type"]):
-                if bean_property["type"] not in includes:
-                    includes.append(bean_property["type"])
+            self._recursive_gen_includes(bean_property, includes)
         includes.sort()
         if self._has_list():
             includes.insert(0, self.list_include)
 
         self.out_data["includes"] = includes
 
+    @staticmethod
+    def _recursive_is_const(out_data):
+        out_data["const"] = BeanTransformer._is_const(out_data)
+        for bean_class in out_data["classes"]:
+            BeanTransformer._recursive_is_const(bean_class)
+
     def _fill(self):
         # type: () -> None
         super(BeanTransformer, self)._fill()
-        self.out_data["const"] = self._is_const()
+        BeanTransformer._recursive_is_const(self.out_data)
         self._gen_includes()
 
     def generate(self):
@@ -168,4 +234,3 @@ class QtBeanTransformer(BeanTransformer, object):
         super(QtBeanTransformer, self).__init__(in_data)
         self.list_type = "QList"
         self.list_include = "QList"
-

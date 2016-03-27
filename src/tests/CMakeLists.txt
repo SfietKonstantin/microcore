@@ -20,7 +20,7 @@ include_directories(
 )
 
 # Microgen
-microgen_bean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
+microgen_bean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml microgen/nested_test.yaml)
 microgen_qtbean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
 microgen_factory(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml)
 

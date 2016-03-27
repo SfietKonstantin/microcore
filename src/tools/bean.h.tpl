@@ -44,6 +44,9 @@ namespace microcore { namespace ${module} {
 class ${name}
 {
 public:
+% for nested_class in classes:
+${nested_class["h_nested"]}
+% endfor
     explicit ${name}() = default;
     explicit ${name}
     (

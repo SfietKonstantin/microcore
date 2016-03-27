@@ -89,6 +89,24 @@ class TestTransformer(TestCase):
         with self.assertRaises(CheckException):
             transformer._check()
 
+    def test__check_propertiessameproperty(self):
+        properties = [
+            {"name": "test", "type": "test", "access": "c"},
+            {"name": "test", "type": "test", "access": "c"}
+        ]
+        transformer = Transformer({"name": "test", "module": "test", "properties": properties})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
+    def test__check_propertiesrecursivesameclass(self):
+        properties = [
+            {"name": "test", "type": "class", "access": "c", "class_name": "Test"},
+            {"name": "test2", "type": "class", "access": "c", "class_name": "Test"}
+        ]
+        transformer = Transformer({"name": "test", "module": "test", "properties": properties})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
     def test__check_properties1(self):
         properties = [
             {"name": "test", "type": "test", "access": "c"}
@@ -130,7 +148,8 @@ class TestTransformer(TestCase):
                     "name": "property",
                     "access": "rw"
                 }
-            ]
+            ],
+            "classes": []
         }
         transformer = Transformer(in_data)
         transformer._fill()
@@ -156,33 +175,62 @@ class TestTransformer(TestCase):
                     "name": "property",
                     "access": "rw"
                 }
-            ]
+            ],
+            "classes": []
         }
         transformer = Transformer(in_data)
         transformer.generate()
         self.assertDictEqual(transformer.out_data, out_data)
 
-
-class TestBeanTransformer(TestCase):
-    def test__fill1(self):
-        out_data = {
-            "const": False,
-            "includes": ["QString"],
+    def test__fill_recursive(self):
+        in_data = {
             "name": "name_test",
             "module": "module_test",
             "properties": [
                 {
                     "name": "property",
-                    "type": "QString",
+                    "class_name": "Test",
+                    "type": "class",
                     "access": "rw",
-                    "getter": "property",
-                    "setter": "setProperty",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
-                    "initial_value": ""
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c"
+                        }
+                    ]
                 }
             ]
         }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "access": "rw"
+                }
+            ],
+            "classes": [
+                {
+                    "name": "Test",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "access": "c"
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = Transformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+
+class TestBeanTransformer(TestCase):
+    def test__fill1(self):
         in_data = {
             "name": "name_test",
             "module": "module_test",
@@ -193,6 +241,26 @@ class TestBeanTransformer(TestCase):
                     "access": "rw"
                 }
             ]
+        }
+        out_data = {
+            "const": False,
+            "includes": ["QString"],
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "nested_type": "QString",
+                    "access": "rw",
+                    "getter": "property",
+                    "setter": "setProperty",
+                    "setter_type": "QString &&",
+                    "setter_impl": "std::move(property)",
+                    "initial_value": ""
+                }
+            ],
+            "classes": []
         }
         transformer = BeanTransformer(in_data)
         transformer._fill()
@@ -220,11 +288,76 @@ class TestBeanTransformer(TestCase):
                 {
                     "name": "property",
                     "type": "std::vector<QString>",
+                    "nested_type": "std::vector<QString>",
                     "access": "c",
                     "getter": "property",
                     "setter_type": "std::vector<QString> &&",
                     "setter_impl": "std::move(property)",
                     "initial_value": ""
+                }
+            ],
+            "classes": []
+        }
+        transformer = BeanTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill_recursive(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "access": "rw",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c"
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "const": False,
+            "includes": ["QString"],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "nested_type": "name_test::Test",
+                    "access": "rw",
+                    "getter": "property",
+                    "setter": "setProperty",
+                    "setter_type": "Test &&",
+                    "setter_impl": "std::move(property)",
+                    "initial_value": ""
+                }
+            ],
+            "classes": [
+                {
+                    "name": "Test",
+                    "const": True,
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "nested_type": "QString",
+                            "access": "c",
+                            "getter": "sub_property",
+                            "setter_type": "QString &&",
+                            "setter_impl": "std::move(sub_property)",
+                            "initial_value": ""
+                        }
+                    ],
+                    "classes": []
                 }
             ]
         }
@@ -253,6 +386,7 @@ class TestBeanTransformer(TestCase):
                 {
                     "name": "property",
                     "type": "QString",
+                    "nested_type": "QString",
                     "access": "rw",
                     "getter": "property",
                     "setter": "setProperty",
@@ -260,7 +394,8 @@ class TestBeanTransformer(TestCase):
                     "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
-            ]
+            ],
+            "classes": []
         }
         transformer = BeanTransformer(in_data)
         transformer.generate()
@@ -288,13 +423,15 @@ class TestBeanTransformer(TestCase):
                 {
                     "name": "property",
                     "type": "std::vector<QString>",
+                    "nested_type": "std::vector<QString>",
                     "access": "c",
                     "getter": "property",
                     "setter_type": "std::vector<QString> &&",
                     "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
-            ]
+            ],
+            "classes": []
         }
         transformer = BeanTransformer(in_data)
         transformer.generate()

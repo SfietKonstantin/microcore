@@ -4,6 +4,7 @@ import yaml
 import argparse
 import os
 from exception import MicroGenException
+from generator import BeanGenerator
 from transformer import BeanTransformer, QtBeanTransformer
 
 
@@ -128,19 +129,14 @@ def generate_bean(data, outdir, outfile):
     transformer = BeanTransformer(data)
     transformer.generate()
 
-    with open(os.path.join(outdir, outfile + ".h"), 'w') as h:
-        template = Template(filename=_get_tpl("bean.h.tpl"))
-        h.write(template.render(**transformer.out_data))
-        h.close()
-    with open(os.path.join(outdir, outfile + ".cpp"), 'w') as cpp:
-        template = Template(filename=_get_tpl("bean.cpp.tpl"))
-        cpp.write(template.render(**transformer.out_data))
-        cpp.close()
+    generator = BeanGenerator(transformer.out_data, outdir, outfile)
+    generator.generate()
 
 
 def generate_qtbean(data, outdir, outfile):
     transformer = QtBeanTransformer(data)
     transformer.generate()
+    transformer.out_data["outfile"] = outfile + "object"
 
     with open(os.path.join(outdir, outfile + "object.h"), 'w') as h:
         template = Template(filename=_get_tpl("beanobject.h.tpl"))
