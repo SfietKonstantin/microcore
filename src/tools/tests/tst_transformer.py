@@ -202,6 +202,7 @@ class TestTransformer(TestCase):
             "classes": [
                 {
                     "name": "Test",
+                    "module": "module_test",
                     "nested_name": "name_test::Test",
                     "properties": [
                         {
@@ -330,6 +331,7 @@ class TestBeanTransformer(TestCase):
             "classes": [
                 {
                     "name": "Test",
+                    "module": "module_test",
                     "nested_name": "name_test::Test",
                     "const": True,
                     "properties": [
@@ -393,6 +395,7 @@ class TestBeanTransformer(TestCase):
             "classes": [
                 {
                     "name": "Test",
+                    "module": "module_test",
                     "nested_name": "name_test::Test",
                     "const": True,
                     "properties": [
@@ -542,6 +545,7 @@ class TestQtBeanTransformer(TestCase):
             "classes": [
                 {
                     "name": "name_testTest",
+                    "module": "module_test",
                     "nested_name": "name_test::Test",
                     "const": True,
                     "properties": [
@@ -613,6 +617,7 @@ class TestQtBeanTransformer(TestCase):
             "classes": [
                 {
                     "name": "name_testTest",
+                    "module": "module_test",
                     "nested_name": "name_test::Test",
                     "const": True,
                     "properties": [

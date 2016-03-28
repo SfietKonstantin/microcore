@@ -13,7 +13,7 @@ ${name}Object::${name}Object(QObject *parent)
     % endfor
 }
 
-${name}Object::${name}Object(${nested_name} &&data, QObject *parent)
+${name}Object::${name}Object(::microcore::${module}::${nested_name} &&data, QObject *parent)
     : QObject(parent), m_data(std::move(data))
 {
     % for property in properties:
@@ -44,15 +44,15 @@ ${property["qt_type"]} ${name}Object::${property["getter"]}() const
 }
 
 % endfor
-const ${nested_name} & ${name}Object::data() const
+const ::microcore::${module}::${nested_name} & ${name}Object::data() const
 {
     return m_data;
 }
 
-void ${name}Object::update(${nested_name} &&data)
+void ${name}Object::update(::microcore::${module}::${nested_name} &&data)
 {
 % if not const:
-    ${nested_name} oldData {m_data};
+    ::microcore::${module}::${nested_name} oldData {m_data};
     m_data = std::move(data);
     % for property in properties:
     % if property["is_qt_object"]:

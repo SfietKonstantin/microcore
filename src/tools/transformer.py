@@ -105,6 +105,7 @@ class Transformer:
     def _fill_class(self, bean_property, parent_classes):
         # type: (dict, list) -> dict
         returned = {
+            "module": self.in_data["module"],
             "name": bean_property["class_name"],
             "nested_name": "::".join(parent_classes) + "::" + bean_property["class_name"]
         }

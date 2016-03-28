@@ -21,7 +21,7 @@ class ${name}Object : public QObject
     % endfor
 public:
     explicit ${name}Object(QObject *parent = nullptr);
-    explicit ${name}Object(${nested_name} &&data, QObject *parent = nullptr);
+    explicit ${name}Object(::microcore::${module}::${nested_name} &&data, QObject *parent = nullptr);
     DISABLE_COPY_DISABLE_MOVE(${name}Object);
     % for property in properties:
     % if property["type_type"] == "list":
@@ -30,8 +30,8 @@ public:
     ${property["qt_type"]} ${property["getter"]}() const;
     % endif
     % endfor
-    const ${nested_name} & data() const;
-    void update(${nested_name} &&data);
+    const ::microcore::${module}::${nested_name} & data() const;
+    void update(::microcore::${module}::${nested_name} &&data);
 % if not const:
 Q_SIGNALS:
     % for property in properties:
@@ -41,7 +41,7 @@ Q_SIGNALS:
     % endfor
 % endif
 private:
-    ${nested_name} m_data {};
+    ::microcore::${module}::${nested_name} m_data {};
     % for property in properties:
     % if property["is_qt_object"]:
     % if property["type_type"] == "list":

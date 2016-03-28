@@ -65,7 +65,7 @@ class ${name}Object : public QObject
     % endfor
 public:
     explicit ${name}Object(QObject *parent = nullptr);
-    explicit ${name}Object(${name} &&data, QObject *parent = nullptr);
+    explicit ${name}Object(::microcore::${module}::${name} &&data, QObject *parent = nullptr);
     DISABLE_COPY_DISABLE_MOVE(${name}Object);
     % for property in properties:
     % if property["type_type"] == "list":
@@ -74,8 +74,8 @@ public:
     ${property["qt_type"]} ${property["getter"]}() const;
     % endif
     % endfor
-    const ${name} & data() const;
-    void update(${name} &&data);
+    const ::microcore::${module}::${name} & data() const;
+    void update(::microcore::${module}::${name} &&data);
 % if not const:
 Q_SIGNALS:
     % for property in properties:
@@ -85,7 +85,7 @@ Q_SIGNALS:
     % endfor
 % endif
 private:
-    ${name} m_data {};
+    ::microcore::${module}::${name} m_data {};
     % for property in properties:
     % if property["is_qt_object"]:
     % if property["type_type"] == "list":
