@@ -14,6 +14,12 @@ properties:
 
     - name: description
       type: QString
-      access: c
+      access: rw
       json_path: props/props/description
+      json_optional: true
+
+    - name: integer
+      type: int
+      access: rw
+      json_path: props/props/integer
       json_optional: true

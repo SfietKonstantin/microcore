@@ -43,22 +43,6 @@ class Transformer:
             return ""
 
     @staticmethod
-    def _make_setter_type(c_type):
-        # type: (str) -> str
-        if Transformer._is_simple_type(c_type):
-            return c_type + " "
-        else:
-            return c_type + " &&"
-
-    @staticmethod
-    def _make_setter_impl(c_type, name):
-        # type: (str, str) -> str
-        if Transformer._is_simple_type(c_type):
-            return name
-        else:
-            return "std::move(" + name + ")"
-
-    @staticmethod
     def _recursive_check(bean_property, names, classes):
         # type: (dict, list, list) -> None
         if "name" not in bean_property:
@@ -145,7 +129,6 @@ class BeanTransformer(Transformer, object):
     def __init__(self, in_data):
         # type: (dict) -> BeanTransformer
         super(BeanTransformer, self).__init__(in_data)
-        self.list_type = "std::vector"
         self.list_include = "vector"
 
     @staticmethod
@@ -167,15 +150,16 @@ class BeanTransformer(Transformer, object):
             nested_type = "::".join(parent_classes) + "::" + bean_type
 
         if "list" in bean_property and bean_property["list"]:
-            bean_type = "%s<%s>" % (self.list_type, bean_type)
-            nested_type = "%s<%s>" % (self.list_type, nested_type)
+            returned["type_type"] = "list"
+        elif self._is_simple_type(bean_type):
+            returned["type_type"] = "simple"
+        else:
+            returned["type_type"] = "object"
 
         returned["type"] = bean_type
         returned["nested_type"] = nested_type
         returned["getter"] = self._make_getter(bean_type, bean_property["name"])
         returned["initial_value"] = self._make_initial_value(bean_type)
-        returned["setter_type"] = self._make_setter_type(bean_type)
-        returned["setter_impl"] = self._make_setter_impl(bean_type, bean_property["name"])
         if bean_property["access"] == "rw":
             returned["setter"] = self._make_setter(bean_property["name"])
         return returned
@@ -234,8 +218,7 @@ class BeanTransformer(Transformer, object):
 class QtBeanTransformer(BeanTransformer, object):
     def __init__(self, in_data):
         super(QtBeanTransformer, self).__init__(in_data)
-        self.list_type = "QList"
-        self.list_include = "QList"
+        self.out_data["has_list"] = False
 
     def _fill_class(self, bean_property, parent_classes):
         # type: (dict, list) -> dict
@@ -249,9 +232,13 @@ class QtBeanTransformer(BeanTransformer, object):
         if bean_property["type"] == "class":
             returned["qt_class"] = "".join(parent_classes) + bean_property["class_name"] + "Object"
             returned["qt_type"] = returned["qt_class"] + " *"
-            returned["is_object"] = True
+            returned["is_qt_object"] = True
         else:
             returned["qt_type"] = bean_property["type"]
-            returned["is_object"] = False
+            returned["is_qt_object"] = False
+
+        if "list" in bean_property and bean_property["list"]:
+            self.out_data["has_list"] = True
+
         returned["nested_name"] = "::".join(parent_classes) + "::" + bean_property["name"]
         return returned

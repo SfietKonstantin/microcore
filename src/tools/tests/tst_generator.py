@@ -4,7 +4,7 @@ from generator import Generator, BeanGenerator
 
 class TestGenerator(TestCase):
     def test__indent(self):
-        generator = Generator({}, None, None)
+        generator = Generator({}, "", "")
         self.assertEqual(generator._indent("hello\nworld"), "    hello\n    world")
         self.assertEqual(generator._indent("hello\nworld\n"), "    hello\n    world")
 
@@ -15,11 +15,10 @@ class TestGenerator(TestCase):
                 {
                     "name": "property",
                     "type": "QString",
+                    "type_type": "object",
                     "nested_type": "QString",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -31,17 +30,16 @@ class TestGenerator(TestCase):
                 {
                     "name": "property",
                     "type": "QString",
+                    "type_type": "object",
                     "nested_type": "QString",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
-                    "initial_value": "",
+                    "initial_value": ""
                 }
             ],
             "classes": []
         }
-        generator = BeanGenerator({}, None, None)
+        generator = BeanGenerator({}, "", "")
         generator._create_templates()
         generator._recursive_fill_templates(in_data)
         self.assertEqual(in_data, out_data)
@@ -54,11 +52,10 @@ class TestGenerator(TestCase):
                 {
                     "name": "property",
                     "type": "QString",
+                    "type_type": "object",
                     "nested_type": "QString",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -70,11 +67,10 @@ class TestGenerator(TestCase):
                         {
                             "name": "sub_property",
                             "type": "QString",
+                            "type_type": "object",
                             "nested_type": "QString",
                             "access": "c",
                             "getter": "sub_property",
-                            "setter_type": "QString &&",
-                            "setter_impl": "std::move(sub_property)",
                             "initial_value": ""
                         }
                     ],
@@ -130,11 +126,10 @@ QString name_test::Test::sub_property() const
                 {
                     "name": "property",
                     "type": "QString",
+                    "type_type": "object",
                     "nested_type": "QString",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -148,11 +143,10 @@ QString name_test::Test::sub_property() const
                         {
                             "name": "sub_property",
                             "type": "QString",
+                            "type_type": "object",
                             "nested_type": "QString",
                             "access": "c",
                             "getter": "sub_property",
-                            "setter_type": "QString &&",
-                            "setter_impl": "std::move(sub_property)",
                             "initial_value": ""
                         }
                     ],
@@ -160,7 +154,7 @@ QString name_test::Test::sub_property() const
                 }
             ]
         }
-        generator = BeanGenerator({}, None, None)
+        generator = BeanGenerator({}, "", "")
         generator._create_templates()
         generator._recursive_fill_templates(in_data)
         self.assertEqual(in_data, out_data)

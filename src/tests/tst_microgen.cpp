@@ -37,35 +37,41 @@
 TEST(MicroGen, Bean)
 {
     ::microcore::test::Test test1 {};
-    ::microcore::test::Test test2 {QString("id"), QString("name"), QString("description")};
+    ::microcore::test::Test test2 {QString("id"), QString("name"), QString("description"), 123};
     ::microcore::test::Test test3 {test2};
     ::microcore::test::Test test4 {};
     test4 = test2;
     EXPECT_EQ(test4.id(), test2.id());
     EXPECT_EQ(test4.name(), test2.name());
     EXPECT_EQ(test4.description(), test2.description());
+    EXPECT_EQ(test4.integer(), test2.integer());
 }
 
 TEST(MicroGen, BeanQt)
 {
-    ::microcore::test::Test test {QString("id"), QString("name"), QString("description")};
+    ::microcore::test::Test test {QString("id"), QString("name"), QString("description"), 123};
     ::microcore::test::qt::TestObject test1 {};
     ::microcore::test::qt::TestObject test2 {::microcore::test::Test(test)};
     EXPECT_EQ(test.id(), test2.id());
     EXPECT_EQ(test.name(), test2.name());
     EXPECT_EQ(test.description(), test2.description());
+    EXPECT_EQ(test.integer(), test2.integer());
     EXPECT_EQ(test.id(), test2.data().id());
     EXPECT_EQ(test.name(), test2.data().name());
     EXPECT_EQ(test.description(), test2.data().description());
+    EXPECT_EQ(test.integer(), test2.data().integer());
 
-    ::microcore::test::Test newTest {QString("newId"), QString("newName"), QString("newDescription")};
+
+    ::microcore::test::Test newTest {QString("newId"), QString("newName"), QString("newDescription"), 456};
     test2.update(::microcore::test::Test(newTest)); // Not updatable
     EXPECT_EQ(test.id(), test2.id());
     EXPECT_EQ(test.name(), test2.name());
     EXPECT_EQ(test.description(), test2.description());
+    EXPECT_EQ(test.integer(), test2.integer());
     EXPECT_EQ(test.id(), test2.data().id());
     EXPECT_EQ(test.name(), test2.data().name());
     EXPECT_EQ(test.description(), test2.data().description());
+    EXPECT_EQ(test.integer(), test2.data().integer());
 }
 
 TEST(MicroGen, Factory)

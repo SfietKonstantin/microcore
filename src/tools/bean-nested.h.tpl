@@ -9,9 +9,17 @@ ${nested_class["h_nested"]}
     (
         % for i, property in enumerate(properties):
         % if i != len(properties) - 1:
-        ${property["setter_type"]}${property["name"]},
+        % if property["type_type"] == "simple":
+        ${property["type"]} ${property["name"]},
         % else:
-        ${property["setter_type"]}${property["name"]}
+        ${property["type"]} &&${property["name"]},
+        % endif
+        % else:
+        % if property["type_type"] == "simple":
+        ${property["type"]} ${property["name"]}
+        % else:
+        ${property["type"]} &&${property["name"]}
+        % endif
         % endif
         %endfor
     );
@@ -19,13 +27,27 @@ ${nested_class["h_nested"]}
     bool operator==(const ${name} &other) const;
     bool operator!=(const ${name} &other) const;
     % for property in properties:
+    % if property["type_type"] == "list":
+    std::vector<${property["type"]}> ${property["getter"]}() const;
+    % else:
     ${property["type"]} ${property["getter"]}() const;
+    % endif
     % if property["access"] == "rw":
-    void ${property["setter"]}(${property["setter_type"]}${property["name"]});
+    % if property["type_type"] == "simple":
+    void ${property["setter"]}(${property["type"]} ${property["name"]});
+    % elif property["type_type"] == "list":
+    void ${property["setter"]}(std::vector<${property["type"]}> &&${property["name"]});
+    % else:
+    void ${property["setter"]}(${property["type"]} &&${property["name"]});
+    % endif
     % endif
     % endfor
 private:
     % for property in properties:
+    % if property["type_type"] == "list":
+    std::vector<${property["type"]}> m_${property["name"]} {};
+    % else:
     ${property["type"]} m_${property["name"]} {${property["initial_value"]}};
+    % endif
     % endfor
 };

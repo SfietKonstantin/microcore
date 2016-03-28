@@ -1,6 +1,6 @@
 from unittest import TestCase
 from exception import CheckException
-from transformer import Transformer, BeanTransformer
+from transformer import Transformer, BeanTransformer, QtBeanTransformer
 
 
 class TestTransformer(TestCase):
@@ -29,18 +29,6 @@ class TestTransformer(TestCase):
         self.assertEqual(Transformer._make_initial_value("double"), "0.")
         self.assertEqual(Transformer._make_initial_value("QString"), "")
         self.assertEqual(Transformer._make_initial_value("std::vector<bool>"), "")
-
-    def test__make_setter_type(self):
-        self.assertEqual(Transformer._make_setter_type("bool"), "bool ")
-        self.assertEqual(Transformer._make_setter_type("int"), "int ")
-        self.assertEqual(Transformer._make_setter_type("double"), "double ")
-        self.assertEqual(Transformer._make_setter_type("QString"), "QString &&")
-
-    def test__make_setter_impl(self):
-        self.assertEqual(Transformer._make_setter_impl("bool", "value"), "value")
-        self.assertEqual(Transformer._make_setter_impl("int", "value"), "value")
-        self.assertEqual(Transformer._make_setter_impl("double", "value"), "value")
-        self.assertEqual(Transformer._make_setter_impl("QString", "value"), "std::move(value)")
 
     def test__check_noname(self):
         transformer = Transformer({})
@@ -253,11 +241,10 @@ class TestBeanTransformer(TestCase):
                     "name": "property",
                     "type": "QString",
                     "nested_type": "QString",
+                    "type_type": "object",
                     "access": "rw",
                     "getter": "property",
                     "setter": "setProperty",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -288,12 +275,11 @@ class TestBeanTransformer(TestCase):
             "properties": [
                 {
                     "name": "property",
-                    "type": "std::vector<QString>",
-                    "nested_type": "std::vector<QString>",
+                    "type": "QString",
+                    "nested_type": "QString",
+                    "type_type": "list",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "std::vector<QString> &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -303,7 +289,7 @@ class TestBeanTransformer(TestCase):
         transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)
 
-    def test__fill_recursive(self):
+    def test__fill_recursive1(self):
         self.maxDiff = None
         in_data = {
             "name": "name_test",
@@ -334,11 +320,10 @@ class TestBeanTransformer(TestCase):
                     "name": "property",
                     "type": "Test",
                     "nested_type": "name_test::Test",
+                    "type_type": "object",
                     "access": "rw",
                     "getter": "property",
                     "setter": "setProperty",
-                    "setter_type": "Test &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
@@ -352,10 +337,9 @@ class TestBeanTransformer(TestCase):
                             "name": "sub_property",
                             "type": "QString",
                             "nested_type": "QString",
+                            "type_type": "object",
                             "access": "c",
                             "getter": "sub_property",
-                            "setter_type": "QString &&",
-                            "setter_impl": "std::move(sub_property)",
                             "initial_value": ""
                         }
                     ],
@@ -367,7 +351,73 @@ class TestBeanTransformer(TestCase):
         transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)
 
-    def test_generate(self):
+    def test__fill_recursive2(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "list": True,
+                    "access": "rw",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c"
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "const": False,
+            "includes": ["vector", "QString"],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "nested_type": "name_test::Test",
+                    "type_type": "list",
+                    "access": "rw",
+                    "getter": "property",
+                    "setter": "setProperty",
+                    "initial_value": ""
+                }
+            ],
+            "classes": [
+                {
+                    "name": "Test",
+                    "nested_name": "name_test::Test",
+                    "const": True,
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "nested_type": "QString",
+                            "type_type": "object",
+                            "access": "c",
+                            "getter": "sub_property",
+                            "initial_value": ""
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = BeanTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+
+class TestQtBeanTransformer(TestCase):
+    def test__fill1(self):
+        self.maxDiff = None
         in_data = {
             "name": "name_test",
             "module": "module_test",
@@ -384,26 +434,30 @@ class TestBeanTransformer(TestCase):
             "includes": ["QString"],
             "name": "name_test",
             "module": "module_test",
+            "has_list": False,
             "properties": [
                 {
                     "name": "property",
                     "type": "QString",
+                    "is_qt_object": False,
+                    "qt_type": "QString",
+                    "type_type": "object",
                     "nested_type": "QString",
+                    "nested_name": "name_test::property",
                     "access": "rw",
                     "getter": "property",
                     "setter": "setProperty",
-                    "setter_type": "QString &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
             "classes": []
         }
-        transformer = BeanTransformer(in_data)
-        transformer.generate()
+        transformer = QtBeanTransformer(in_data)
+        transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)
 
-    def test__generate2(self):
+    def test__fill2(self):
+        self.maxDiff = None
         in_data = {
             "name": "name_test",
             "module": "module_test",
@@ -421,20 +475,164 @@ class TestBeanTransformer(TestCase):
             "includes": ["vector", "QString"],
             "name": "name_test",
             "module": "module_test",
+            "has_list": True,
             "properties": [
                 {
                     "name": "property",
-                    "type": "std::vector<QString>",
-                    "nested_type": "std::vector<QString>",
+                    "type": "QString",
+                    "is_qt_object": False,
+                    "qt_type": "QString",
+                    "type_type": "list",
+                    "nested_type": "QString",
+                    "nested_name": "name_test::property",
                     "access": "c",
                     "getter": "property",
-                    "setter_type": "std::vector<QString> &&",
-                    "setter_impl": "std::move(property)",
                     "initial_value": ""
                 }
             ],
             "classes": []
         }
-        transformer = BeanTransformer(in_data)
-        transformer.generate()
+        transformer = QtBeanTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill_recursive1(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "access": "rw",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c"
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "const": False,
+            "includes": ["QString"],
+            "has_list": False,
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "is_qt_object": True,
+                    "qt_class": "name_testTestObject",
+                    "qt_type": "name_testTestObject *",
+                    "type_type": "object",
+                    "nested_type": "name_test::Test",
+                    "nested_name": "name_test::property",
+                    "access": "rw",
+                    "getter": "property",
+                    "setter": "setProperty",
+                    "initial_value": ""
+                }
+            ],
+            "classes": [
+                {
+                    "name": "name_testTest",
+                    "nested_name": "name_test::Test",
+                    "const": True,
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "is_qt_object": False,
+                            "qt_type": "QString",
+                            "type_type": "object",
+                            "nested_type": "QString",
+                            "nested_name": "name_test::Test::sub_property",
+                            "access": "c",
+                            "getter": "sub_property",
+                            "initial_value": ""
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = QtBeanTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill_recursive2(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "access": "rw",
+                    "list": True,
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c"
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "const": False,
+            "includes": ["vector", "QString"],
+            "has_list": True,
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "is_qt_object": True,
+                    "qt_class": "name_testTestObject",
+                    "qt_type": "name_testTestObject *",
+                    "type_type": "list",
+                    "nested_type": "name_test::Test",
+                    "nested_name": "name_test::property",
+                    "access": "rw",
+                    "getter": "property",
+                    "setter": "setProperty",
+                    "initial_value": ""
+                }
+            ],
+            "classes": [
+                {
+                    "name": "name_testTest",
+                    "nested_name": "name_test::Test",
+                    "const": True,
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "is_qt_object": False,
+                            "qt_type": "QString",
+                            "type_type": "object",
+                            "nested_type": "QString",
+                            "nested_name": "name_test::Test::sub_property",
+                            "access": "c",
+                            "getter": "sub_property",
+                            "initial_value": ""
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = QtBeanTransformer(in_data)
+        transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)

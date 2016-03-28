@@ -55,6 +55,7 @@ class Generator:
 
 class BeanGenerator(Generator, object):
     def __init__(self, data, outdir, outfile):
+        # type: (dict, str, str) -> BeanGenerator
         super(BeanGenerator, self).__init__(data, outdir, outfile)
         self.h_template_file = "bean.h.tpl"
         self.c_template_file = "bean.cpp.tpl"

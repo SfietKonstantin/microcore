@@ -35,6 +35,9 @@
 #define MICROCORE_${module.upper()}_QT_${name.upper()}OBJECT_H
 
 #include <QObject>
+% if has_list:
+#include <QList>
+% endif
 #include "${parent_outfile}.h"
 
 namespace microcore { namespace ${module} { namespace qt {
@@ -47,9 +50,17 @@ class ${name}Object : public QObject
     Q_OBJECT
     % for property in properties:
     % if property["access"] == "c":
+    % if property["type_type"] == "list":
+    Q_PROPERTY(QList<${property["qt_type"]}> ${property["name"]} READ ${property["getter"]} CONSTANT)
+    % else:
     Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} CONSTANT)
+    % endif
     % elif property["access"] == "r" or property["access"] == "rw":
+    % if property["type_type"] == "list":
+    Q_PROPERTY(QList<${property["qt_type"]}> ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
+    % else:
     Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
+    % endif
     % endif
     % endfor
 public:
@@ -57,7 +68,11 @@ public:
     explicit ${name}Object(${name} &&data, QObject *parent = nullptr);
     DISABLE_COPY_DISABLE_MOVE(${name}Object);
     % for property in properties:
+    % if property["type_type"] == "list":
+    QList<${property["qt_type"]}> ${property["getter"]}() const;
+    % else:
     ${property["qt_type"]} ${property["getter"]}() const;
+    % endif
     % endfor
     const ${name} & data() const;
     void update(${name} &&data);
@@ -72,8 +87,12 @@ Q_SIGNALS:
 private:
     ${name} m_data {};
     % for property in properties:
-    % if property["is_object"]:
+    % if property["is_qt_object"]:
+    % if property["type_type"] == "list":
+    QList<${property["qt_class"]} *> m_${property["name"]} {};
+    % else:
     ${property["qt_class"]} *m_${property["name"]} {nullptr};
+    % endif
     % endif
     % endfor
 };

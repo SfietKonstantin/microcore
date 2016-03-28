@@ -6,10 +6,22 @@ properties:
       type: QString
       access: c
 
+    - name: underlying
+      type: class
+      class_name: NestedClassUnderlyingTest
+      access: rw
+      list: true
+
+      properties:
+          - name: underlyingData
+            type: QVariant
+            access: c
+
     - name: structure
       type: class
       class_name: NestedClassTest
       access: rw
+      list: true
       
       properties:
           - name: key
@@ -25,6 +37,17 @@ properties:
             class_name: AdditionalData
             access: c
             
+            properties:
+                - name: id
+                  type: QString
+                  access: c
+
+          - name: additional_list
+            type: class
+            class_name: AdditionalList
+            access: c
+            list: true
+
             properties:
                 - name: id
                   type: QString
