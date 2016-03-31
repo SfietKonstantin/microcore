@@ -34,14 +34,14 @@
 #ifndef MICROCORE_${module.upper()}_${name.upper()}TYPES_H
 #define MICROCORE_${module.upper()}_${name.upper()}TYPES_H
 
-#include "core/ijob.h"
-#include "error/error.h"
-#include ${request_include}
-#include "${name.lower()}.h"
+#include <core/ijob.h>
+#include <error/error.h>
+#include <json/jsontypes.h>
+#include "${parent_outfile}.h"
 
 namespace microcore { namespace ${module} {
 
-using ${name}Request = ${request};
+using ${name}Request = ::microcore::json::JsonResult;
 using ${name}Result = ${name};
 using ${name}Error = ::microcore::error::Error;
 using ${name}Job = ::microcore::core::IJob<${name}Result, ${name}Error>;

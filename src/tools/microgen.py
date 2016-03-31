@@ -4,15 +4,15 @@ import yaml
 import argparse
 import os
 from exception import MicroGenException
-from generator import BeanGenerator, QtBeanGenerator
-from transformer import BeanTransformer, QtBeanTransformer
+from generator import BeanGenerator, QtBeanGenerator, JsonFactoryGenerator
+from transformer import BeanTransformer, QtBeanTransformer, JsonFactoryTransformer
 
 
 def _get_tpl(tpl):
     return os.path.join(os.path.dirname(os.path.realpath(__file__)), tpl)
 
 
-class JsonFactoryGenerator:
+class JsonFactoryGeneratorOld:
     def __init__(self, data, input, outdir):
         self.data = data
         self.input = input
@@ -120,9 +120,15 @@ def get_data(input):
     return returned
 
 
-def generate_factory(data, input, outdir):
-    generator = JsonFactoryGenerator(data, input, outdir)
-    generator.render()
+def generate_factory(data, outdir, outfile):
+    # generator = JsonFactoryGenerator(data, input, outdir)
+    # generator.render()
+
+    transformer = JsonFactoryTransformer(data)
+    transformer.generate()
+
+    generator = JsonFactoryGenerator(transformer.out_data, outdir, outfile)
+    generator.generate()
 
 
 def generate_bean(data, outdir, outfile):
@@ -157,4 +163,4 @@ elif args.type == "qtbean":
     generate_bean(data, outdir, outfile)
     generate_qtbean(data, outdir, outfile)
 elif args.type == "factory":
-    generate_factory(data, infile, outdir)
+    generate_factory(data, outdir, outfile)

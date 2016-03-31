@@ -1,6 +1,6 @@
 from unittest import TestCase
 from exception import CheckException
-from transformer import Transformer, BeanTransformer, QtBeanTransformer
+from transformer import Transformer, BeanTransformer, QtBeanTransformer, JsonFactoryTransformer
 
 
 class TestTransformer(TestCase):
@@ -116,6 +116,35 @@ class TestTransformer(TestCase):
         transformer = Transformer({"name": "test", "module": "test", "properties": properties})
         transformer._check()
 
+    def test__has_list(self):
+        properties = [
+            {"type": "test"}
+        ]
+        transformer = Transformer({"properties": properties})
+        self.assertFalse(transformer._has_list())
+
+        properties = [
+            {"type": "test", "list": True}
+        ]
+        transformer = Transformer({"properties": properties})
+        self.assertTrue(transformer._has_list())
+
+        properties = [
+            {"type": "class", "properties": [
+                {"type": "test"}
+            ]}
+        ]
+        transformer = Transformer({"properties": properties})
+        self.assertFalse(transformer._has_list())
+
+        properties = [
+            {"type": "class", "properties": [
+                {"type": "test", "list": True}
+            ]}
+        ]
+        transformer = Transformer({"properties": properties})
+        self.assertTrue(transformer._has_list())
+
     def test__fill(self):
         in_data = {
             "name": "name_test",
@@ -134,6 +163,8 @@ class TestTransformer(TestCase):
             "properties": [
                 {
                     "name": "property",
+                    "type": "QString",
+                    "nested_type": "QString",
                     "access": "rw"
                 }
             ],
@@ -143,34 +174,8 @@ class TestTransformer(TestCase):
         transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)
 
-    def test_generate(self):
-        in_data = {
-            "name": "name_test",
-            "module": "module_test",
-            "properties": [
-                {
-                    "name": "property",
-                    "type": "QString",
-                    "access": "rw"
-                }
-            ]
-        }
-        out_data = {
-            "name": "name_test",
-            "module": "module_test",
-            "properties": [
-                {
-                    "name": "property",
-                    "access": "rw"
-                }
-            ],
-            "classes": []
-        }
-        transformer = Transformer(in_data)
-        transformer.generate()
-        self.assertDictEqual(transformer.out_data, out_data)
-
     def test__fill_recursive(self):
+        self.maxDiff = None
         in_data = {
             "name": "name_test",
             "module": "module_test",
@@ -196,6 +201,8 @@ class TestTransformer(TestCase):
             "properties": [
                 {
                     "name": "property",
+                    "type": "Test",
+                    "nested_type": "name_test::Test",
                     "access": "rw"
                 }
             ],
@@ -207,6 +214,8 @@ class TestTransformer(TestCase):
                     "properties": [
                         {
                             "name": "sub_property",
+                            "type": "QString",
+                            "nested_type": "QString",
                             "access": "c"
                         }
                     ],
@@ -639,5 +648,364 @@ class TestQtBeanTransformer(TestCase):
             ]
         }
         transformer = QtBeanTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+
+class TestJsonFactoryTransformer(TestCase):
+    def test__check_propertiesnosource(self):
+        transformer = JsonFactoryTransformer({"name": "test", "module": "test", "properties": {}})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
+    def test__check_propertiessourcejson(self):
+        transformer = JsonFactoryTransformer({"name": "test", "module": "test", "source": "json", "properties": {}})
+        transformer._check()
+
+    def test__check_propertiesnojsonpath(self):
+        properties = [
+            {"name": "test", "access": "r", "type": "QString"}
+        ]
+        transformer = JsonFactoryTransformer({"name": "test",
+                                              "module": "test",
+                                              "source": "json",
+                                              "properties": properties})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
+    def test__check_propertieswithinvalidjsonpath(self):
+        properties = [
+            {"name": "test", "access": "r", "type": "QString", "json_path": "/test"}
+        ]
+        transformer = JsonFactoryTransformer({"name": "test",
+                                              "module": "test",
+                                              "source": "json",
+                                              "properties": properties})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
+    def test__check_propertieswithjsonpath(self):
+        properties = [
+            {"name": "test", "access": "r", "type": "QString", "json_path": "test"}
+        ]
+        transformer = JsonFactoryTransformer({"name": "test",
+                                              "module": "test",
+                                              "source": "json",
+                                              "properties": properties})
+        transformer._check()
+
+    def test__get_splitted_json_path_prefix(self):
+        self.assertEqual(JsonFactoryTransformer._get_splitted_json_path_prefix("test"), [])
+        self.assertEqual(JsonFactoryTransformer._get_splitted_json_path_prefix("test/hello"), ["test"])
+        self.assertEqual(JsonFactoryTransformer._get_splitted_json_path_prefix("test/hello/world"),
+                         ["test", "hello"])
+
+    def test__get_json_path_suffix(self):
+        self.assertEqual(JsonFactoryTransformer._get_json_path_suffix("test"), "test")
+        self.assertEqual(JsonFactoryTransformer._get_json_path_suffix("test/hello"), "hello")
+        self.assertEqual(JsonFactoryTransformer._get_json_path_suffix("test/hello/world"), "world")
+
+    def test__add_to_json_path_tree(self):
+        tree = {}
+        JsonFactoryTransformer._add_to_json_path_tree(tree, ["test"])
+        self.assertDictEqual(tree, {
+            "test": {}
+        })
+        JsonFactoryTransformer._add_to_json_path_tree(tree, ["test", "hello", "world"])
+        self.assertDictEqual(tree, {
+            "test": {
+                "hello": {
+                    "world": {}
+                }
+            }
+        })
+        JsonFactoryTransformer._add_to_json_path_tree(tree, ["test", "hello", "json"])
+        self.assertDictEqual(tree, {
+            "test": {
+                "hello": {
+                    "world": {},
+                    "json": {}
+                }
+            }
+        })
+        JsonFactoryTransformer._add_to_json_path_tree(tree, ["test", "goodbye"])
+        self.assertDictEqual(tree, {
+            "test": {
+                "hello": {
+                    "world": {},
+                    "json": {}
+                },
+                "goodbye": {}
+            }
+        })
+        JsonFactoryTransformer._add_to_json_path_tree(tree, ["test2", "alpha"])
+        self.assertDictEqual(tree, {
+            "test": {
+                "hello": {
+                    "world": {},
+                    "json": {}
+                }, "goodbye": {}
+            },
+            "test2": {
+                "alpha": {}
+            }
+        })
+
+    def test__convert_to_json_path_flat_tree(self):
+        tree = {
+            "root": {
+                "test": {
+                    "hello": {
+                        "world": {},
+                        "json": {}
+                    }, "goodbye": {}
+                },
+                "test2": {
+                    "alpha": {}
+                }
+            }
+        }
+        flat_tree = []
+        JsonFactoryTransformer._convert_to_json_path_flat_tree(flat_tree, tree)
+        self.assertEqual(flat_tree, [(["root"], "test"),
+                                     (["root", "test"], "hello"),
+                                     (["root", "test", "hello"], "world"),
+                                     (["root", "test", "hello"], "json"),
+                                     (["root", "test"], "goodbye"),
+                                     (["root"], "test2"),
+                                     (["root", "test2"], "alpha")])
+
+    def test__fill1(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "access": "rw",
+                    "json_path": "test/hello/world"
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "includes": [],
+            "json_tree": [
+                (["root"], "test"),
+                (["root", "test"], "hello")
+            ],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "nested_type": "QString",
+                    "access": "rw",
+                    "json_type": "simple",
+                    "json_optional": False,
+                    "json_conversion_method": "toString",
+                    "json_path": "test/hello/world",
+                    "json_prefix": ["root", "test", "hello"],
+                    "json_suffix": "world"
+                }
+            ],
+            "classes": []
+        }
+        transformer = JsonFactoryTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill2(self):
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "access": "c",
+                    "list": True,
+                    "json_path": "test/hello/world"
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "includes": ["QJsonArray"],
+            "json_tree": [
+                (["root"], "test"),
+                (["root", "test"], "hello")
+            ],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "nested_type": "QString",
+                    "access": "c",
+                    "json_type": "array",
+                    "json_optional": False,
+                    "json_conversion_method": "toString",
+                    "json_path": "test/hello/world",
+                    "json_prefix": ["root", "test", "hello"],
+                    "json_suffix": "world"
+                }
+            ],
+            "classes": []
+        }
+        transformer = JsonFactoryTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill_recursive1(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "access": "rw",
+                    "json_path": "test/hello/world",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c",
+                            "json_path": "sub_test/alpha",
+                            "json_optional": True
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "includes": [],
+            "json_tree": [
+                (["root"], "test"),
+                (["root", "test"], "hello")
+            ],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "nested_type": "name_test::Test",
+                    "access": "rw",
+                    "json_type": "object",
+                    "json_optional": False,
+                    "json_conversion_method": "toObject",
+                    "json_path": "test/hello/world",
+                    "json_prefix": ["root", "test", "hello"],
+                    "json_suffix": "world"
+                }
+            ],
+            "classes": [
+                {
+                    "name": "Test",
+                    "root_name": "name_test",
+                    "module": "module_test",
+                    "nested_name": "name_test::Test",
+                    "json_tree": [(["root"], "sub_test")],
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "nested_type": "QString",
+                            "access": "c",
+                            "json_type": "simple",
+                            "json_optional": True,
+                            "json_conversion_method": "toString",
+                            "json_path": "sub_test/alpha",
+                            "json_prefix": ["root", "sub_test"],
+                            "json_suffix": "alpha"
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = JsonFactoryTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill_recursive2(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "properties": [
+                {
+                    "name": "property",
+                    "class_name": "Test",
+                    "type": "class",
+                    "list": True,
+                    "access": "rw",
+                    "json_path": "test/hello/world",
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "access": "c",
+                            "json_path": "sub_test/alpha",
+                            "json_optional": True
+                        }
+                    ]
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "includes": ["QJsonArray"],
+            "json_tree": [
+                (["root"], "test"),
+                (["root", "test"], "hello")
+            ],
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "Test",
+                    "nested_type": "name_test::Test",
+                    "access": "rw",
+                    "json_type": "objectarray",
+                    "json_optional": False,
+                    "json_conversion_method": "toObject",
+                    "json_path": "test/hello/world",
+                    "json_prefix": ["root", "test", "hello"],
+                    "json_suffix": "world"
+                }
+            ],
+            "classes": [
+                {
+                    "name": "Test",
+                    "root_name": "name_test",
+                    "module": "module_test",
+                    "nested_name": "name_test::Test",
+                    "json_tree": [(["root"], "sub_test")],
+                    "properties": [
+                        {
+                            "name": "sub_property",
+                            "type": "QString",
+                            "nested_type": "QString",
+                            "access": "c",
+                            "json_type": "simple",
+                            "json_optional": True,
+                            "json_conversion_method": "toString",
+                            "json_path": "sub_test/alpha",
+                            "json_prefix": ["root", "sub_test"],
+                            "json_suffix": "alpha"
+                        }
+                    ],
+                    "classes": []
+                }
+            ]
+        }
+        transformer = JsonFactoryTransformer(in_data)
         transformer._fill()
         self.assertDictEqual(transformer.out_data, out_data)

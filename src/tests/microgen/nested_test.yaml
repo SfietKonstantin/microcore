@@ -5,50 +5,60 @@ properties:
     - name: id
       type: QString
       access: c
+      json_path: id_str
 
     - name: underlying
       type: class
       class_name: NestedClassUnderlyingTest
       access: rw
       list: true
+      json_path: underlying
 
       properties:
           - name: underlyingData
-            type: QVariant
+            type: QString
             access: c
+            json_path: data
 
     - name: structure
       type: class
       class_name: NestedClassTest
       access: rw
       list: true
+      json_path: structure/data
       
       properties:
           - name: key
             type: QString
             access: c
+            json_path: key
           
           - name: value
-            type: QVariant
+            type: QString
             access: rw
+            json_path: value
             
           - name: additional_data
             type: class
             class_name: AdditionalData
             access: c
+            json_path: additional_data
             
             properties:
                 - name: id
                   type: QString
                   access: c
+                  json_path: id_str
 
           - name: additional_list
             type: class
             class_name: AdditionalList
             access: c
             list: true
+            json_path: additional_list
 
             properties:
                 - name: id
                   type: QString
                   access: c
+                  json_path: id_str

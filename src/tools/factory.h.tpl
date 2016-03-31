@@ -37,7 +37,7 @@
 #include <core/globals.h>
 #include <core/ijobfactory.h>
 #include <error/error.h>
-#include "${name.lower()}types.h"
+#include "${parent_outfile}types.h"
 
 namespace microcore { namespace ${module} {
 
@@ -47,6 +47,9 @@ public:
     explicit ${name}RequestFactory() = default;
     DISABLE_COPY_DISABLE_MOVE(${name}RequestFactory);
     std::unique_ptr<${name}Job> create(${name}Request &&request) const override;
+% if len(classes) > 0:
+private:
+% endif
 };
 
 }}

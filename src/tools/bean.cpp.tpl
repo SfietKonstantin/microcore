@@ -44,12 +44,16 @@ ${name}::${name}
     % if i != len(properties) - 1:
     % if property["type_type"] == "simple":
     ${property["type"]} ${property["name"]},
+    % elif property["type_type"] == "list":
+    std::vector<${property["type"]}> &&${property["name"]},
     % else:
     ${property["type"]} &&${property["name"]},
     % endif
     % else:
     % if property["type_type"] == "simple":
     ${property["type"]} ${property["name"]}
+    % elif property["type_type"] == "list":
+    std::vector<${property["type"]}> &&${property["name"]}
     % else:
     ${property["type"]} &&${property["name"]}
     % endif

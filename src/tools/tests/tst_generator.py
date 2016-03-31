@@ -7,6 +7,7 @@ class TestGenerator(TestCase):
         generator = Generator({}, "", "")
         self.assertEqual(generator._indent("hello\nworld"), "    hello\n    world")
         self.assertEqual(generator._indent("hello\nworld\n"), "    hello\n    world")
+        self.assertEqual(generator._indent("hello\n\nworld\n"), "    hello\n\n    world")
 
     def test__recursive_fill1(self):
         in_data = {
