@@ -294,6 +294,9 @@ class JsonFactoryTransformer(Transformer, object):
             raise CheckException("\"source\" is a mandatory field")
         if self.in_data["source"] != "json":
             raise CheckException("Only json \"source\" is currently supported")
+        if self._is_json_list():
+            if "json_path" not in self.in_data:
+                raise CheckException("\"json_path\" is a mandatory field for lists")
 
     def _recursive_check_property(self, bean_property, names, classes):
         # type: (dict, list, list) -> None
@@ -351,9 +354,14 @@ class JsonFactoryTransformer(Transformer, object):
     def _convert_to_json_path_flat_tree(flat_tree, tree):
         JsonFactoryTransformer._recursive_build_json_path_flat_tree(flat_tree, [], tree)
 
+    def _is_json_list(self):
+        # type: () -> boolean
+        return "list" in self.in_data and self.in_data["list"]
+
     def _fill_properties(self, in_data, out_data, parent_classes):
         # type: (dict, dict, list) -> None
         super(JsonFactoryTransformer, self)._fill_properties(in_data, out_data, parent_classes)
+
         tree = {}
         for bean_property in in_data["properties"]:
             root_path = JsonFactoryTransformer._add_root(bean_property["json_path"])
@@ -362,6 +370,12 @@ class JsonFactoryTransformer(Transformer, object):
         flat_tree = []
         JsonFactoryTransformer._convert_to_json_path_flat_tree(flat_tree, tree)
         out_data["json_tree"] = flat_tree
+
+        has_complex = False
+        for bean_property in out_data["properties"]:
+            if bean_property["json_type"] != "simple":
+                has_complex = True
+        out_data["json_has_complex"] = has_complex
 
     def _fill_property(self, bean_property, parent_classes):
         # type: (dict, list) -> dict
@@ -395,7 +409,7 @@ class JsonFactoryTransformer(Transformer, object):
     def _gen_includes(self):
         # type: () -> None
         includes = []
-        if self._has_list():
+        if self._has_list() or self._is_json_list():
             includes.append("QJsonArray")
 
         self.out_data["includes"] = includes
@@ -404,3 +418,15 @@ class JsonFactoryTransformer(Transformer, object):
         # type: () -> None
         super(JsonFactoryTransformer, self)._fill()
         self._gen_includes()
+        if self._is_json_list():
+            self.out_data["json_type"] = "array"
+            json_path = self.in_data["json_path"]
+            root_path = JsonFactoryTransformer._add_root(json_path)
+            self.out_data["json_array_prefix"] = JsonFactoryTransformer._get_splitted_json_path_prefix(root_path)
+            self.out_data["json_array_suffix"] = JsonFactoryTransformer._get_json_path_suffix(root_path)
+            tree = {}
+            JsonFactoryTransformer._add_to_json_path_tree(tree, root_path.split("/"))
+            self.out_data["json_array_tree"] = []
+            JsonFactoryTransformer._convert_to_json_path_flat_tree(self.out_data["json_array_tree"], tree)
+        else:
+            self.out_data["json_type"] = "object"

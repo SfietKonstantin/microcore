@@ -1,0 +1,10 @@
+module: test
+name: ListTest
+source: json
+list: true
+json_path: path/to/list
+properties:
+    - name: id
+      type: QString
+      access: c
+      json_path: id_str

@@ -126,7 +126,10 @@ class JsonFactoryGenerator(FactoryGenerator, object):
     def _create_templates(self):
         # type: () -> None
         self.h_template = Template(filename=Generator._get_tpl("factory.h.tpl"))
-        self.c_template = Template(filename=Generator._get_tpl("factoryjson.cpp.tpl"))
-        # self.h_nested_template = Template(filename=Generator._get_tpl("factoryjson-nested.h.tpl"))
+        if self.data["json_type"] == "array":
+            self.c_template = Template(filename=Generator._get_tpl("factorylistjson.cpp.tpl"))
+            self.h_types_template = Template(filename=Generator._get_tpl("typeslistjson.h.tpl"))
+        else:
+            self.c_template = Template(filename=Generator._get_tpl("factoryjson.cpp.tpl"))
+            self.h_types_template = Template(filename=Generator._get_tpl("typesjson.h.tpl"))
         self.c_nested_template = Template(filename=Generator._get_tpl("factoryjson-nested.cpp.tpl"))
-        self.h_types_template = Template(filename=Generator._get_tpl("typesjson.h.tpl"))

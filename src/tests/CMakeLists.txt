@@ -20,9 +20,14 @@ include_directories(
 )
 
 # Microgen
-microgen_bean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml microgen/nested_test.yaml)
-microgen_qtbean(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml microgen/nested_test.yaml)
-microgen_factory(${PROJECT_NAME}_MICROGEN_SRCS microgen/test.yaml microgen/nested_test.yaml)
+set(${PROJECT_NAME}_MICROGEN_YAML
+    microgen/test.yaml
+    microgen/nested_test.yaml
+    microgen/list_test.yaml
+)
+microgen_bean(${PROJECT_NAME}_MICROGEN_SRCS ${${PROJECT_NAME}_MICROGEN_YAML})
+microgen_qtbean(${PROJECT_NAME}_MICROGEN_SRCS ${${PROJECT_NAME}_MICROGEN_YAML})
+microgen_factory(${PROJECT_NAME}_MICROGEN_SRCS ${${PROJECT_NAME}_MICROGEN_YAML})
 
 set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_executor.cpp

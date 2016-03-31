@@ -74,6 +74,7 @@ ${nested_class["c_nested"]}
         std::vector<${property["nested_type"]}> ${"__".join(property["json_prefix"]) + "__" + property["json_suffix"]} {};
         % endif
         % endfor
+        % if json_has_complex:
         try {
             % for property in properties:
             % if property["json_type"] == "array" or property["json_type"] == "objectarray":
@@ -93,6 +94,7 @@ ${nested_class["c_nested"]}
                           QString::fromStdString(error),
                           m_request.toJson(QJsonDocument::Compact)));
         }
+        % endif
 
         onResult(${name}Result(
             % for i, property in enumerate(properties):

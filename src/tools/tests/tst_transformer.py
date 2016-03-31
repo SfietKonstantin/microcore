@@ -694,6 +694,32 @@ class TestJsonFactoryTransformer(TestCase):
                                               "properties": properties})
         transformer._check()
 
+    def test__check_withlist1(self):
+        properties = [
+            {"name": "test", "access": "r", "type": "QString", "json_path": "test"}
+        ]
+
+        transformer = JsonFactoryTransformer({"name": "test",
+                                              "module": "test",
+                                              "source": "json",
+                                              "list": True,
+                                              "properties": properties})
+        with self.assertRaises(CheckException):
+            transformer._check()
+
+    def test__check_withlist2(self):
+        properties = [
+            {"name": "test", "access": "r", "type": "QString", "json_path": "test"}
+        ]
+
+        transformer = JsonFactoryTransformer({"name": "test",
+                                              "module": "test",
+                                              "source": "json",
+                                              "list": True,
+                                              "json_path": "test",
+                                              "properties": properties})
+        transformer._check()
+
     def test__get_splitted_json_path_prefix(self):
         self.assertEqual(JsonFactoryTransformer._get_splitted_json_path_prefix("test"), [])
         self.assertEqual(JsonFactoryTransformer._get_splitted_json_path_prefix("test/hello"), ["test"])
@@ -793,10 +819,12 @@ class TestJsonFactoryTransformer(TestCase):
             "name": "name_test",
             "module": "module_test",
             "includes": [],
+            "json_type": "object",
             "json_tree": [
                 (["root"], "test"),
                 (["root", "test"], "hello")
             ],
+            "json_has_complex": False,
             "properties": [
                 {
                     "name": "property",
@@ -835,6 +863,60 @@ class TestJsonFactoryTransformer(TestCase):
             "name": "name_test",
             "module": "module_test",
             "includes": ["QJsonArray"],
+            "json_type": "object",
+            "json_tree": [
+                (["root"], "test"),
+                (["root", "test"], "hello")
+            ],
+            "json_has_complex": True,
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "nested_type": "QString",
+                    "access": "c",
+                    "json_type": "array",
+                    "json_optional": False,
+                    "json_conversion_method": "toString",
+                    "json_path": "test/hello/world",
+                    "json_prefix": ["root", "test", "hello"],
+                    "json_suffix": "world"
+                }
+            ],
+            "classes": []
+        }
+        transformer = JsonFactoryTransformer(in_data)
+        transformer._fill()
+        self.assertDictEqual(transformer.out_data, out_data)
+
+    def test__fill3(self):
+        self.maxDiff = None
+        in_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "list": True,
+            "json_path": "level1/array",
+            "properties": [
+                {
+                    "name": "property",
+                    "type": "QString",
+                    "access": "rw",
+                    "json_path": "test/hello/world"
+                }
+            ]
+        }
+        out_data = {
+            "name": "name_test",
+            "module": "module_test",
+            "includes": ["QJsonArray"],
+            "json_type": "array",
+            "json_array_prefix": ["root", "level1"],
+            "json_array_suffix": "array",
+            "json_array_tree": [
+                (["root"], "level1"),
+                (["root", "level1"], "array")
+            ],
+            "json_has_complex": False,
             "json_tree": [
                 (["root"], "test"),
                 (["root", "test"], "hello")
@@ -844,8 +926,8 @@ class TestJsonFactoryTransformer(TestCase):
                     "name": "property",
                     "type": "QString",
                     "nested_type": "QString",
-                    "access": "c",
-                    "json_type": "array",
+                    "access": "rw",
+                    "json_type": "simple",
                     "json_optional": False,
                     "json_conversion_method": "toString",
                     "json_path": "test/hello/world",
@@ -887,10 +969,12 @@ class TestJsonFactoryTransformer(TestCase):
             "name": "name_test",
             "module": "module_test",
             "includes": [],
+            "json_type": "object",
             "json_tree": [
                 (["root"], "test"),
                 (["root", "test"], "hello")
             ],
+            "json_has_complex": True,
             "properties": [
                 {
                     "name": "property",
@@ -912,6 +996,7 @@ class TestJsonFactoryTransformer(TestCase):
                     "module": "module_test",
                     "nested_name": "name_test::Test",
                     "json_tree": [(["root"], "sub_test")],
+                    "json_has_complex": False,
                     "properties": [
                         {
                             "name": "sub_property",
@@ -963,10 +1048,12 @@ class TestJsonFactoryTransformer(TestCase):
             "name": "name_test",
             "module": "module_test",
             "includes": ["QJsonArray"],
+            "json_type": "object",
             "json_tree": [
                 (["root"], "test"),
                 (["root", "test"], "hello")
             ],
+            "json_has_complex": True,
             "properties": [
                 {
                     "name": "property",
@@ -988,6 +1075,7 @@ class TestJsonFactoryTransformer(TestCase):
                     "module": "module_test",
                     "nested_name": "name_test::Test",
                     "json_tree": [(["root"], "sub_test")],
+                    "json_has_complex": False,
                     "properties": [
                         {
                             "name": "sub_property",
