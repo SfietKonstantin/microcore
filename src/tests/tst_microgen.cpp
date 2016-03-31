@@ -33,45 +33,180 @@
 #include "microgen/test.h"
 #include "microgen/testobject.h"
 #include "microgen/testrequestfactory.h"
+#include "microgen/nested_test.h"
+#include <QSignalSpy>
 
 TEST(MicroGen, Bean)
 {
-    ::microcore::test::Test test1 {};
-    ::microcore::test::Test test2 {QString("id"), QString("name"), QString("description"), 123};
-    ::microcore::test::Test test3 {test2};
-    ::microcore::test::Test test4 {};
-    test4 = test2;
-    EXPECT_EQ(test4.id(), test2.id());
-    EXPECT_EQ(test4.name(), test2.name());
-    EXPECT_EQ(test4.description(), test2.description());
-    EXPECT_EQ(test4.integer(), test2.integer());
+    // Empty constructor
+    {
+        ::microcore::test::Test empty {};
+        Q_UNUSED(empty)
+    }
+    // Copy constructor
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::Test copyConstructed {test};
+        EXPECT_EQ(copyConstructed.constant(), test.constant());
+        EXPECT_EQ(copyConstructed.readOnly(), test.readOnly());
+        EXPECT_EQ(copyConstructed.readWrite(), test.readWrite());
+        EXPECT_EQ(copyConstructed.integer(), test.integer());
+        EXPECT_EQ(copyConstructed.doubleValue(), test.doubleValue());
+        EXPECT_EQ(copyConstructed, test);
+    }
+    // Move constructor
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::Test moveConstructed {::microcore::test::Test(test)};
+        EXPECT_EQ(moveConstructed.constant(), test.constant());
+        EXPECT_EQ(moveConstructed.readOnly(), test.readOnly());
+        EXPECT_EQ(moveConstructed.readWrite(), test.readWrite());
+        EXPECT_EQ(moveConstructed.integer(), test.integer());
+        EXPECT_EQ(moveConstructed.doubleValue(), test.doubleValue());
+        EXPECT_EQ(moveConstructed, test);
+    }
+    // Assignment operator
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::Test assigned {};
+        assigned = test;
+        EXPECT_EQ(assigned.constant(), test.constant());
+        EXPECT_EQ(assigned.readOnly(), test.readOnly());
+        EXPECT_EQ(assigned.readWrite(), test.readWrite());
+        EXPECT_EQ(assigned.integer(), test.integer());
+        EXPECT_EQ(assigned.doubleValue(), test.doubleValue());
+        EXPECT_EQ(assigned, test);
+    }
+    // Move assignment operator
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::Test cloned {test};
+        ::microcore::test::Test moveAssigned {};
+        moveAssigned = std::move(cloned);
+        EXPECT_EQ(moveAssigned.constant(), test.constant());
+        EXPECT_EQ(moveAssigned.readOnly(), test.readOnly());
+        EXPECT_EQ(moveAssigned.readWrite(), test.readWrite());
+        EXPECT_EQ(moveAssigned.integer(), test.integer());
+        EXPECT_EQ(moveAssigned.doubleValue(), test.doubleValue());
+        EXPECT_EQ(moveAssigned, test);
+    }
+    // Setter
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        test.setReadWrite("read_write2");
+        EXPECT_EQ(test.constant(), test.constant());
+        EXPECT_EQ(test.readOnly(), test.readOnly());
+        EXPECT_EQ(test.readWrite(), "read_write2");
+        EXPECT_EQ(test.integer(), test.integer());
+        EXPECT_EQ(test.doubleValue(), test.doubleValue());
+    }
+    // Comparisons
+    {
+        {
+            ::microcore::test::Test first {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+            ::microcore::test::Test second {QString("constant2"), QString("read_only"), QString("read_write"), 123, 456.};
+            EXPECT_NE(first, second);
+        }
+        {
+            ::microcore::test::Test first {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+            ::microcore::test::Test second {QString("constant"), QString("read_only2"), QString("read_write"), 123, 456.};
+            EXPECT_NE(first, second);
+        }
+        {
+            ::microcore::test::Test first {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+            ::microcore::test::Test second {QString("constant"), QString("read_only"), QString("read_write2"), 123, 456.};
+            EXPECT_NE(first, second);
+        }
+        {
+            ::microcore::test::Test first {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+            ::microcore::test::Test second {QString("constant"), QString("read_only"), QString("read_write"), 1234, 456.};
+            EXPECT_NE(first, second);
+        }
+        {
+            ::microcore::test::Test first {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+            ::microcore::test::Test second {QString("constant"), QString("read_only"), QString("read_write"), 123, 4567.};
+            EXPECT_NE(first, second);
+        }
+    }
 }
 
 TEST(MicroGen, BeanQt)
 {
-    ::microcore::test::Test test {QString("id"), QString("name"), QString("description"), 123};
-    ::microcore::test::qt::TestObject test1 {};
-    ::microcore::test::qt::TestObject test2 {::microcore::test::Test(test)};
-    EXPECT_EQ(test.id(), test2.id());
-    EXPECT_EQ(test.name(), test2.name());
-    EXPECT_EQ(test.description(), test2.description());
-    EXPECT_EQ(test.integer(), test2.integer());
-    EXPECT_EQ(test.id(), test2.data().id());
-    EXPECT_EQ(test.name(), test2.data().name());
-    EXPECT_EQ(test.description(), test2.data().description());
-    EXPECT_EQ(test.integer(), test2.data().integer());
+    // Empty constructor
+    {
+        ::microcore::test::Test empty {};
+        ::microcore::test::qt::TestObject emptyObject {};
+        EXPECT_EQ(emptyObject.constant(), empty.constant());
+        EXPECT_EQ(emptyObject.readOnly(), empty.readOnly());
+        EXPECT_EQ(emptyObject.readWrite(), empty.readWrite());
+        EXPECT_EQ(emptyObject.integer(), empty.integer());
+        EXPECT_EQ(emptyObject.doubleValue(), empty.doubleValue());
+        EXPECT_EQ(emptyObject.data(), empty);
+    }
+    // Default constructor
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::qt::TestObject testObject {::microcore::test::Test(test)};
+        EXPECT_EQ(testObject.constant(), test.constant());
+        EXPECT_EQ(testObject.readOnly(), test.readOnly());
+        EXPECT_EQ(testObject.readWrite(), test.readWrite());
+        EXPECT_EQ(testObject.integer(), test.integer());
+        EXPECT_EQ(testObject.doubleValue(), test.doubleValue());
+        EXPECT_EQ(testObject.data(), test);
+    }
+    // Update
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::qt::TestObject testObject {::microcore::test::Test(test)};
 
+        QSignalSpy readOnlySpy (&testObject, SIGNAL(readOnlyChanged()));
+        QSignalSpy readWriteSpy (&testObject, SIGNAL(readWriteChanged()));
+        ::microcore::test::Test newTest {QString("constant2"), QString("read_only2"), QString("read_write2"), 1234, 4567.};
+        testObject.update(::microcore::test::Test(newTest));
+        EXPECT_EQ(readOnlySpy.count(), 1);
+        EXPECT_EQ(readWriteSpy.count(), 1);
+        EXPECT_EQ(testObject.constant(), test.constant());
+        EXPECT_EQ(testObject.readOnly(), newTest.readOnly());
+        EXPECT_EQ(testObject.readWrite(), newTest.readWrite());
+        EXPECT_EQ(testObject.integer(), test.integer());
+        EXPECT_EQ(testObject.doubleValue(), test.doubleValue());
+    }
+    // Partial update 1
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::qt::TestObject testObject {::microcore::test::Test(test)};
 
-    ::microcore::test::Test newTest {QString("newId"), QString("newName"), QString("newDescription"), 456};
-    test2.update(::microcore::test::Test(newTest)); // Not updatable
-    EXPECT_EQ(test.id(), test2.id());
-    EXPECT_EQ(test.name(), test2.name());
-    EXPECT_EQ(test.description(), test2.description());
-    EXPECT_EQ(test.integer(), test2.integer());
-    EXPECT_EQ(test.id(), test2.data().id());
-    EXPECT_EQ(test.name(), test2.data().name());
-    EXPECT_EQ(test.description(), test2.data().description());
-    EXPECT_EQ(test.integer(), test2.data().integer());
+        QSignalSpy readOnlySpy (&testObject, SIGNAL(readOnlyChanged()));
+        QSignalSpy readWriteSpy (&testObject, SIGNAL(readWriteChanged()));
+        ::microcore::test::Test newTest {QString("constant2"), QString("read_only2"), QString("read_write"), 1234, 4567.};
+        testObject.update(::microcore::test::Test(newTest));
+        EXPECT_EQ(readOnlySpy.count(), 1);
+        EXPECT_EQ(readWriteSpy.count(), 0);
+    }
+    // Partial update 2
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::qt::TestObject testObject {::microcore::test::Test(test)};
+
+        QSignalSpy readOnlySpy (&testObject, SIGNAL(readOnlyChanged()));
+        QSignalSpy readWriteSpy (&testObject, SIGNAL(readWriteChanged()));
+        ::microcore::test::Test newTest {QString("constant2"), QString("read_only"), QString("read_write2"), 1234, 4567.};
+        testObject.update(::microcore::test::Test(newTest));
+        EXPECT_EQ(readOnlySpy.count(), 0);
+        EXPECT_EQ(readWriteSpy.count(), 1);
+    }
+    // No update
+    {
+        ::microcore::test::Test test {QString("constant"), QString("read_only"), QString("read_write"), 123, 456.};
+        ::microcore::test::qt::TestObject testObject {::microcore::test::Test(test)};
+
+        QSignalSpy readOnlySpy (&testObject, SIGNAL(readOnlyChanged()));
+        QSignalSpy readWriteSpy (&testObject, SIGNAL(readWriteChanged()));
+        ::microcore::test::Test newTest {QString("constant2"), QString("read_only"), QString("read_write"), 1234, 4567.};
+        testObject.update(::microcore::test::Test(newTest));
+        EXPECT_EQ(readOnlySpy.count(), 0);
+        EXPECT_EQ(readWriteSpy.count(), 0);
+    }
 }
 
 TEST(MicroGen, Factory)

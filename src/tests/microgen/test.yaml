@@ -2,24 +2,30 @@ module: test
 name: Test
 source: json
 properties:
-    - name: id
+    - name: constant
       type: QString
       access: c
-      json_path: id_str
+      json_path: constants/constant
 
-    - name: name
+    - name: readOnly
       type: QString
-      access: c
-      json_path: props_test/name
+      access: r
+      json_path: read_only/name
 
-    - name: description
+    - name: readWrite
       type: QString
       access: rw
-      json_path: props/props/description
+      json_path: read_only/read_write/description
       json_optional: true
 
     - name: integer
       type: int
-      access: rw
-      json_path: props/props/integer
+      access: c
+      json_path: constants/integer
+      json_optional: true
+
+    - name: doubleValue
+      type: double
+      access: c
+      json_path: constants/double
       json_optional: true
