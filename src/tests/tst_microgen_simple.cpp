@@ -35,8 +35,9 @@
 #include "microgen/testrequestfactory.h"
 #include "microgen/nested_test.h"
 #include <QSignalSpy>
+#include <QJsonObject>
 
-TEST(MicroGen, Bean)
+TEST(MicroGenSimple, Bean)
 {
     // Empty constructor
     {
@@ -130,7 +131,7 @@ TEST(MicroGen, Bean)
     }
 }
 
-TEST(MicroGen, BeanQt)
+TEST(MicroGenSimple, BeanQt)
 {
     // Empty constructor
     {
@@ -209,8 +210,19 @@ TEST(MicroGen, BeanQt)
     }
 }
 
-TEST(MicroGen, Factory)
+TEST(MicroGenSimple, Factory)
 {
     ::microcore::test::TestRequestFactory factory {};
-    EXPECT_TRUE(factory.create(::microcore::json::JsonResult()));
+    QJsonDocument document {QJsonObject {
+        {QLatin1String("constants"), QJsonObject {
+            {QLatin1String("constant"), QLatin1String("constant_value")}
+        }},
+        {QLatin1String("read_only"), QJsonObject {
+            {QLatin1String("name"), QLatin1String("name_value")}
+        }}
+    }};
+
+    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(::microcore::json::JsonResult())};
+    EXPECT_TRUE(job);
+
 }

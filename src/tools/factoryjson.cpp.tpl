@@ -72,6 +72,8 @@ ${nested_class["c_nested"]}
         % for property in properties:
         % if property["json_type"] == "array" or property["json_type"] == "objectarray":
         std::vector<${property["nested_type"]}> ${"__".join(property["json_prefix"]) + "__" + property["json_suffix"]} {};
+        % elif property["json_type"] == "object":
+        ${property["nested_type"]} ${"__".join(property["json_prefix"]) + "__" + property["json_suffix"]} {};
         % endif
         % endfor
         % if json_has_complex:
@@ -86,13 +88,14 @@ ${nested_class["c_nested"]}
                 % endif
             }
             % elif property["json_type"] == "object":
-            ${property["nested_type"]} ${"__".join(property["json_prefix"]) + "__" + property["json_suffix"]} {${property["type"]}Factory::create(${"__".join(property["json_prefix"])}.value(QLatin1String("${property["json_suffix"]}")).${property["json_conversion_method"]}(), *this)};
+            ${"__".join(property["json_prefix"]) + "__" + property["json_suffix"]} = ${property["type"]}Factory::create(${"__".join(property["json_prefix"])}.value(QLatin1String("${property["json_suffix"]}")).${property["json_conversion_method"]}(), *this);
             % endif
             % endfor
         } catch (const std::string &error) {
             onError(Error("${module}_${name.lower()}",
                           QString::fromStdString(error),
                           m_request.toJson(QJsonDocument::Compact)));
+            return;
         }
         % endif
 

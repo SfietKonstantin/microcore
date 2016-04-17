@@ -1,0 +1,14 @@
+module: test
+name: ObjectTest
+source: json
+properties:
+    - name: content
+      type: class
+      class_name: Content
+      access: c
+      json_path: constants/content
+      properties:
+          - name: string
+            type: QString
+            access: c
+            json_path: constants/string
