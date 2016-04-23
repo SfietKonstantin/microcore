@@ -36,20 +36,30 @@
 
 namespace microcore { namespace core {
 
+/**
+ * @brief A factory for IJob
+ *
+ * This class is used to create IJob.
+ * Job creation is done via create().
+ */
 template<class Request, class Result, class Error>
 class IJobFactory
 {
 public:
+    /**
+     * @brief Destructor
+     */
     virtual ~IJobFactory() {}
+    /**
+     * @brief Create an IJob
+     *
+     * Implement this method to create an IJob.
+     * A job is created based on the supplied request.
+     *
+     * @param request request used to create the IJob.
+     * @return the created IJob.
+     */
     virtual std::unique_ptr<IJob<Result, Error>> create(Request &&request) const = 0;
-};
-
-template<class Result, class Error>
-class IJobFactory<void, Result, Error>
-{
-public:
-    virtual ~IJobFactory() {}
-    virtual std::unique_ptr<IJob<Result, Error>> create() const = 0;
 };
 
 }}

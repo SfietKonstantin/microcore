@@ -37,13 +37,43 @@
 
 namespace microcore { namespace core {
 
+/**
+ * @brief A job
+ *
+ * This class represents a job. A job is executed via
+ * execute(). The execution can be asynchronous. Two callbacks
+ * have to be passed to the execute() function. One is called
+ * when the job is successful and one is called when there is
+ * an error.
+ *
+ * Result
+ */
 template<class Result, class Error>
 class IJob
 {
 public:
+    /**
+     * @brief Type of the success callback
+     */
     using OnResult_t = std::function<void (Result &&)>;
+    /**
+     * @brief Type of the error callback
+     */
     using OnError_t = std::function<void (Error &&)>;
+    /**
+     * @brief Destructor
+     */
     virtual ~IJob() {}
+    /**
+     * @brief Execute a job
+     *
+     * Implement this method to perform a task. Use the callbacks
+     * passed as arguments to indicate if the job has succeded or
+     * failed.
+     *
+     * @param onResult callback used to indicate if the job is successful.
+     * @param onError callback used to indicate if the job has failed.
+     */
     virtual void execute(OnResult_t onResult, OnError_t onError) = 0;
 };
 
