@@ -41,8 +41,14 @@ template<class Result, class Error>
 class MockJob: public IJob<Result, Error>
 {
 public:
-    MOCK_METHOD2_T(execute, void (std::function<void (Result &&)> onResult,
-                                  std::function<void (Error &&)> onError));
+    void execute(typename IJob<Result, Error>::OnResult_t &&onResult,
+                 typename IJob<Result, Error>::OnError_t &&onError) override
+    {
+        executeImpl(onResult, onError);
+    }
+    MOCK_METHOD2_T(executeImpl, void (typename IJob<Result, Error>::OnResult_t onResult,
+                                      typename IJob<Result, Error>::OnError_t onError));
+
 };
 
 }}

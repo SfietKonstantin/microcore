@@ -74,7 +74,7 @@ public:
      * @param onResult callback used to indicate if the job is successful.
      * @param onError callback used to indicate if the job has failed.
      */
-    virtual void execute(OnResult_t onResult, OnError_t onError) = 0;
+    virtual void execute(OnResult_t &&onResult, OnError_t &&onError) = 0;
 };
 
 }}

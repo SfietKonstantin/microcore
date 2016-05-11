@@ -148,7 +148,7 @@ TEST_F(TstModelAppender, TestSuccess)
     EXPECT_CALL(*m_factory, mockCreate(_)).Times(0);
     EXPECT_CALL(*m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_onResult = onResult;
             m_onError = onError;
         }));
@@ -189,7 +189,7 @@ TEST_F(TstModelAppender, TestError)
     EXPECT_CALL(*m_factory, mockCreate(_)).Times(0);
     EXPECT_CALL(*m_factory, mockCreate(1)).Times(1).WillRepeatedly(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_onResult = onResult;
             m_onError = onError;
         }));
@@ -217,7 +217,7 @@ TEST_F(TstModelAppender, TestBusy)
     // Mock
     ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_onResult = onResult;
             m_onError = onError;
         }));
@@ -236,7 +236,7 @@ TEST_F(TstModelAppender, TestListenerDelayAddStart)
     // Mock
     ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_onResult = onResult;
             m_onError = onError;
         }));
@@ -254,7 +254,7 @@ TEST_F(TstModelAppender, TestListenerDelayAddError)
     // Mock
     ON_CALL(*m_factory, mockCreate(_)).WillByDefault(Invoke([this](const int &) {
         std::unique_ptr<AppenderJob> returned (new AppenderJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([this](AppenderJob::OnResult_t onResult, AppenderJob::OnError_t onError) {
             m_onResult = onResult;
             m_onError = onError;
         }));

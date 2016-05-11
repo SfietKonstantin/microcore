@@ -53,7 +53,7 @@ ${nested_class["c_nested"]}
         : m_request(std::move(request))
     {
     }
-    void execute(OnResult_t onResult, OnError_t onError) override
+    void execute(OnResult_t &&onResult, OnError_t &&onError) override
     {
         QJsonObject root {m_request.object()};
         % for object in json_tree:

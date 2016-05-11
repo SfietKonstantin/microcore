@@ -60,7 +60,7 @@ ${nested_class["c_nested"]}
         % endfor
         return ${"__".join(json_array_prefix)}.value(QLatin1String("${json_array_suffix}")).toArray();
     }
-    void execute(OnResult_t onResult, OnError_t onError) override
+    void execute(OnResult_t &&onResult, OnError_t &&onError) override
     {
         QJsonArray rootArray = getArray(m_request.object());
         ${name}Result returned {};

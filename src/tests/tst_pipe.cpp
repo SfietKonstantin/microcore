@@ -136,7 +136,7 @@ TEST_F(TstPipe, TestSuccess)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
            onResult(ResultB(2));
         }));
         return returned;
@@ -144,7 +144,7 @@ TEST_F(TstPipe, TestSuccess)
     EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t onResult, CJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t onResult, CJob::OnError_t) {
            onResult(ResultC(3));
         }));
         return returned;
@@ -163,7 +163,7 @@ TEST_F(TstPipe, TestError1)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
            onResult(ResultB(2));
         }));
         return returned;
@@ -171,7 +171,7 @@ TEST_F(TstPipe, TestError1)
     EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t, CJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t, CJob::OnError_t onError) {
            onError(Error(3));
         }));
         return returned;
@@ -190,7 +190,7 @@ TEST_F(TstPipe, TestError2)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, execute(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t, BJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t, BJob::OnError_t onError) {
            onError(Error(2));
         }));
         return returned;
@@ -236,7 +236,7 @@ public:
         : m_result(std::move(result))
     {
     }
-    void execute(OnResult_t onResult, OnError_t) override
+    void execute(OnResult_t &&onResult, OnError_t &&) override
     {
         onResult(std::move(m_result));
     }
@@ -260,7 +260,7 @@ public:
         : m_error(std::move(error))
     {
     }
-    void execute(OnResult_t, OnError_t onError) override
+    void execute(OnResult_t &&, OnError_t &&onError) override
     {
         onError(std::move(m_error));
     }
