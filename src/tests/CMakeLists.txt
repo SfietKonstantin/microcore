@@ -36,7 +36,6 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_ijob.cpp
     includes/tst_core_ijobfactory.cpp
     includes/tst_core_pipe.cpp
-    includes/tst_core_qobjectptr.cpp
     includes/tst_data_dataoperator.cpp
     includes/tst_data_datasource.cpp
     includes/tst_data_datasourcemodel.cpp
@@ -45,14 +44,15 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_data_model.cpp
     includes/tst_data_modelappender.cpp
     includes/tst_data_modeldata.cpp
-    includes/tst_http_httptypes.cpp
-    includes/tst_json_jsontypes.cpp
+    includes/tst_qt_qobjectptr.cpp
     includes/tst_qt_iviewitem.cpp
     includes/tst_qt_iviewmodel.cpp
     includes/tst_qt_viewitem.cpp
     includes/tst_qt_viewitemcontroller.cpp
     includes/tst_qt_viewmodel.cpp
     includes/tst_qt_viewmodelcontroller.cpp
+    includes/tst_http_httptypes.cpp
+    includes/tst_json_jsontypes.cpp
 )
 
 set(${PROJECT_NAME}_SRCS

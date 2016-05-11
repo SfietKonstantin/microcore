@@ -32,8 +32,8 @@
 #ifndef MICROCORE_JSON_JSONTYPES_H
 #define MICROCORE_JSON_JSONTYPES_H
 
-#include "core/qobjectptr.h"
 #include "core/ijob.h"
+#include "qt/qobjectptr.h"
 #include "error/error.h"
 #include <QIODevice>
 #include <QJsonDocument>

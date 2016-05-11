@@ -34,8 +34,8 @@
 
 #include "iviewitem.h"
 #include "viewitemcontroller.h"
-#include "core/qobjectptr.h"
 #include "data/model.h"
+#include "qt/qobjectptr.h"
 
 namespace microcore { namespace qt {
 

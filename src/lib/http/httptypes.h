@@ -32,8 +32,8 @@
 #ifndef MICROCORE_HTTP_HTTPTYPES_H
 #define MICROCORE_HTTP_HTTPTYPES_H
 
-#include "core/qobjectptr.h"
 #include "core/ijob.h"
+#include "qt/qobjectptr.h"
 #include "error/error.h"
 #include <QIODevice>
 
