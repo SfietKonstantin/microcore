@@ -118,7 +118,7 @@ private:
         if (indexInt >= rowCount()) {
             return;
         }
-        m_items[index]->update(*item);
+        m_items[index]->update(item);
         Q_EMIT dataChanged(this->index(indexInt), this->index(indexInt));
     }
 
