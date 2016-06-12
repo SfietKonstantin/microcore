@@ -74,41 +74,46 @@ ViewController::Executor_t & ViewController::addExecutor(std::unique_ptr<Executo
     return returned;
 }
 
-void ViewController::onStart()
-{
-    Q_ASSERT(m_status != Busy);
-    setStatus(Busy);
-}
-
-void microcore::qt::ViewController::onFinish()
-{
-    Q_ASSERT(m_status == Busy);
-    setStatus(Idle);
-    Q_EMIT finished();
-}
-
-void ViewController::onError(const ViewController::Error_t &errorValue)
-{
-    Q_ASSERT(m_status == Busy);
-    setStatus(Error);
-    if (m_errorMessage != errorValue.message()) {
-        m_errorMessage = errorValue.message();
-        Q_EMIT errorMessageChanged();
-    }
-    Q_EMIT error();
-}
-
-void ViewController::onInvalidation(ViewController::Executor_t &source)
-{
-    m_executors.erase(&source);
-}
-
 void ViewController::setStatus(ViewController::Status status)
 {
     if (m_status != status) {
         m_status = status;
         Q_EMIT statusChanged();
     }
+}
+
+ViewController::ExecutorListener::ExecutorListener(ViewController &parent)
+    : m_parent(parent)
+{
+}
+
+void ViewController::ExecutorListener::onStart()
+{
+    Q_ASSERT(m_parent.m_status != Busy);
+    m_parent.setStatus(Busy);
+}
+
+void ViewController::ExecutorListener::onFinish()
+{
+    Q_ASSERT(m_parent.m_status == Busy);
+    m_parent.setStatus(Idle);
+    Q_EMIT m_parent.finished();
+}
+
+void ViewController::ExecutorListener::onError(const ViewController::Error_t &errorValue)
+{
+    Q_ASSERT(m_parent.m_status == Busy);
+    m_parent.setStatus(Error);
+    if (m_parent.m_errorMessage != errorValue.message()) {
+        m_parent.m_errorMessage = errorValue.message();
+        Q_EMIT m_parent.errorMessageChanged();
+    }
+    Q_EMIT m_parent.error();
+}
+
+void ViewController::ExecutorListener::onInvalidation(ViewController::Executor_t &source)
+{
+    m_parent.m_executors.erase(&source);
 }
 
 }}

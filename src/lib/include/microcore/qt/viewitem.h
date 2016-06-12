@@ -39,8 +39,8 @@
 
 namespace microcore { namespace qt {
 
-template<class Type, class ObjectType>
-class ViewItem: public IViewItem, public ::microcore::data::IItem<Type>::IListener
+template<class Item, class ObjectType>
+class ViewItem: public IViewItem, public Item::IListener
 {
 public:
     ~ViewItem()
@@ -67,7 +67,7 @@ public:
     }
     void setController(QObject *controllerObject) override final
     {
-        ControllerType *controller = dynamic_cast<ControllerType *>(controllerObject);
+        ViewItemController<Item> *controller = dynamic_cast<ViewItemController<Item> *>(controllerObject);
         if (m_controller != controller) {
             if (m_controller) {
                 m_controller->item().removeListener(*this);
@@ -87,8 +87,7 @@ protected:
     }
     QObjectPtr<ObjectType> m_data {};
 private:
-    using ControllerType = ViewItemController< ::microcore::data::IItem<Type>>;
-    void onModified(const Type &data) override final
+    void onModified(const typename Item::Type &data) override final
     {
         Q_UNUSED(data)
         refreshData();
@@ -109,12 +108,12 @@ private:
         if (m_controller == nullptr) {
             m_data.reset();
         } else {
-            m_data.reset(new ObjectType(Type(m_controller->item().data())));
+            m_data.reset(new ObjectType(typename Item::Type(m_controller->item().data())));
         }
         Q_EMIT itemChanged();
     }
     bool m_complete {false};
-    ControllerType *m_controller {nullptr};
+    ViewItemController<Item> *m_controller {nullptr};
 };
 
 }}

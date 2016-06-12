@@ -40,6 +40,8 @@ template<class T, class S>
 class IModel
 {
 public:
+    using Type = T;
+    using StorageType = S;
     class IListener
     {
     public:

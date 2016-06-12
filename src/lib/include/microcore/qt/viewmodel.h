@@ -40,8 +40,8 @@
 
 namespace microcore { namespace qt {
 
-template<class Type, class ObjectType, class Storage = std::deque<const Type *>>
-class ViewModel: public IViewModel, public ::microcore::data::IModel<Type, Storage>::IListener
+template<class Model, class ObjectType>
+class ViewModel: public IViewModel, public Model::IListener
 {
 public:
     ~ViewModel()
@@ -69,7 +69,7 @@ public:
     }
     void setController(QObject *controllerObject) override final
     {
-        ControllerType *controller = dynamic_cast<ControllerType *>(controllerObject);
+        ViewModelController<Model> *controller = dynamic_cast<ViewModelController<Model> *>(controllerObject);
         if (m_controller != controller) {
             if (m_controller) {
                 m_controller->model().removeListener(*this);
@@ -93,26 +93,26 @@ protected:
     }
     std::deque<QObjectPtr<ObjectType>> m_items {};
 private:
-    using ControllerType = ViewModelController< ::microcore::data::IModel<Type, Storage>>;
-    void onAppend(const std::vector<const Type *> &items) override final
+    void onAppend(const std::vector<const typename Model::Type *> &items) override final
     {
         beginInsertRows(QModelIndex(), rowCount(), rowCount() + items.size() - 1);
-        std::for_each(std::begin(items), std::end(items), [this](const Type *item) {
+        std::for_each(std::begin(items), std::end(items), [this](const typename Model::Type *item) {
             m_items.emplace_back(ObjectType::create(*item, this));
         });
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onPrepend(const std::vector<const Type *> &items) override final
+    void onPrepend(const std::vector<const typename Model::Type *> &items) override final
     {
         beginInsertRows(QModelIndex(), 0, items.size() - 1);
-        std::for_each(items.rbegin(), items.rend(), [this](const Type *item) {
+        std::for_each(items.rbegin(), items.rend(), [this](const typename Model::Type *item) {
             m_items.emplace_front(ObjectType::create(*item, this));
         });
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onUpdate(typename Storage::size_type index, const Type &item) override final
+    void onUpdate(typename Model::StorageType::size_type index,
+                  const typename Model::Type &item) override final
     {
         int indexInt = static_cast<int>(index);
         if (indexInt >= rowCount()) {
@@ -154,8 +154,8 @@ private:
 
         std::deque<QObjectPtr<ObjectType>> newItems;
         if (m_controller != nullptr) {
-            ::microcore::data::IModel<Type, Storage> &model = m_controller->model();
-            std::for_each(std::begin(model), std::end(model), [&newItems, this](const Type *item) {
+            Model &model = m_controller->model();
+            std::for_each(std::begin(model), std::end(model), [&newItems, this](const typename Model::Type *item) {
                 newItems.emplace_back(ObjectType::create(*item, this));
             });
         }
@@ -202,7 +202,7 @@ private:
         endMoveRows();
     }
     bool m_complete {false};
-    ControllerType *m_controller {nullptr};
+    ViewModelController<Model> *m_controller {nullptr};
 };
 
 }}

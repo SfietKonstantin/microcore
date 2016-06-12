@@ -88,10 +88,17 @@ protected:
         return true;
     }
 private:
-    void onStart() override final;
-    void onFinish() override final;
-    void onError(const Error_t &errorValue) override final;
-    void onInvalidation(Executor_t &source) override final;
+    class ExecutorListener: public ::microcore::core::Executor< ::microcore::error::Error>::IListener
+    {
+    public:
+        explicit ExecutorListener(ViewController &parent);
+        void onStart() override final;
+        void onFinish() override final;
+        void onError(const Error_t &errorValue) override final;
+        void onInvalidation(Executor_t &source) override final;
+    private:
+        ViewController &m_parent;
+    };
     void setStatus(Status status);
     Status m_status {Idle};
     QString m_errorMessage {};

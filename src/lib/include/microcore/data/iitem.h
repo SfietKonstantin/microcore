@@ -40,6 +40,7 @@ template<class T>
 class IItem
 {
 public:
+    using Type = T;
     class IListener
     {
     public:

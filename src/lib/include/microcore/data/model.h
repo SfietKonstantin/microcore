@@ -45,76 +45,76 @@
 namespace microcore { namespace data {
 
 template<class V, class M, class S = std::deque<const V *>>
-class Model: public IMutableModel<V, S>, private IDataStore<typename M::KeyType, V>::IListener
+class Model: public IMutableModel<V, S>
 {
 public:
     explicit Model(IDataStore<typename M::KeyType, V> &dataStore)
-        : m_dataStore {&dataStore}
+        : m_listener {*this}, m_dataStore {&dataStore}
     {
-        m_dataStore->addListener(*this);
+        m_dataStore->addListener(m_listener);
     }
     DISABLE_COPY_DEFAULT_MOVE(Model);
     ~Model()
     {
         if (m_dataStore) {
-            m_dataStore->removeListener(*this);
+            m_dataStore->removeListener(m_listener);
         }
 
         using namespace std::placeholders;
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
     }
-    typename S::iterator begin() noexcept override
+    typename S::iterator begin() noexcept override final
     {
         return m_data.begin();
     }
-    typename S::iterator end() noexcept override
+    typename S::iterator end() noexcept override final
     {
         return m_data.end();
     }
-    typename S::const_iterator begin() const noexcept override
+    typename S::const_iterator begin() const noexcept override final
     {
         return m_data.begin();
     }
-    typename S::const_iterator end() const noexcept override
+    typename S::const_iterator end() const noexcept override final
     {
         return m_data.end();
     }
-    bool empty() const noexcept override
+    bool empty() const noexcept override final
     {
         return m_data.empty();
     }
-    typename S::size_type size() const noexcept override
+    typename S::size_type size() const noexcept override final
     {
         return m_data.size();
     }
-    virtual const V * operator[](typename S::size_type index) const override
+    virtual const V * operator[](typename S::size_type index) const override final
     {
         if (index >= m_data.size()) {
             return nullptr;
         }
         return m_data[index];
     }
-    void addListener(typename IModel<V, S>::IListener &listener) override
+    void addListener(typename IModel<V, S>::IListener &listener) override final
     {
         bool inserted {m_listeners.emplace(&listener).second};
         if (inserted && !m_data.empty()) {
             listener.onAppend(std::vector<const V *>(std::begin(m_data), std::end(m_data)));
         }
     }
-    void removeListener(typename IModel<V, S>::IListener &listener) override
+    void removeListener(typename IModel<V, S>::IListener &listener) override final
     {
         m_listeners.erase(&listener);
     }
-    void append(std::vector<V> &&values) override
+    void append(std::vector<V> &&values) override final
     {
         insert(std::end(m_data), std::move(values), &IModel<V, S>::IListener::onAppend);
     }
-    void prepend(std::vector<V> &&values) override
+    void prepend(std::vector<V> &&values) override final
     {
         insert(std::begin(m_data), std::move(values), &IModel<V, S>::IListener::onPrepend);
     }
-    void insert(typename S::size_type index, std::vector<V> &&values) override
+    void insert(typename S::size_type index, std::vector<V> &&values) override final
     {
         if (index > m_data.size()) {
             return;
@@ -123,7 +123,7 @@ public:
         insert(std::begin(m_data) + index, std::move(values),
                std::bind(&IModel<V, S>::IListener::onInsert, _1, index, _2));
     }
-    void remove(typename S::size_type index) override
+    void remove(typename S::size_type index) override final
     {
         ListenBlockerLock lock {m_listeningDataStore};
         if (m_dataStore == nullptr) {
@@ -143,7 +143,7 @@ public:
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
     }
-    void update(typename S::size_type index, arg_rvalue_reference<V> value) override
+    void update(typename S::size_type index, arg_rvalue_reference<V> value) override final
     {
         ListenBlockerLock lock {m_listeningDataStore};
         if (m_dataStore == nullptr) {
@@ -166,7 +166,7 @@ public:
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*storedValue)));
     }
-    void move(typename S::size_type oldIndex, typename S::size_type newIndex) override
+    void move(typename S::size_type oldIndex, typename S::size_type newIndex) override final
     {
         if (oldIndex >= m_data.size() || newIndex > m_data.size()) {
             return;
@@ -187,6 +187,72 @@ public:
                       std::bind(&IModel<V, S>::IListener::onMove, _1, oldIndex, newIndex));
     }
 private:
+    class DataStoreListener: public IDataStore<typename M::KeyType, V>::IListener
+    {
+    public:
+        explicit DataStoreListener(Model<V, M, S> &parent)
+            : m_parent {parent}
+        {
+        }
+        void onAdd(arg_const_reference<typename M::KeyType> key,
+                   arg_const_reference<V> value) override final
+        {
+            Q_UNUSED(key)
+            Q_UNUSED(value)
+        }
+        void onRemove(arg_const_reference<typename M::KeyType> key) override final
+        {
+            if (!m_parent.m_listeningDataStore) {
+                return;
+            }
+
+            auto it = std::find_if(std::begin(m_parent.m_data), std::end(m_parent.m_data), [&key, this](const V *v) {
+                return m_parent.m_mapper(*v) == key;
+            });
+
+            if (it == std::end(m_parent.m_data)) {
+                return;
+            }
+            typename S::size_type index = it - std::begin(m_parent.m_data);
+            m_parent.m_data.erase(it);
+
+            using namespace std::placeholders;
+            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
+                          std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
+        }
+        void onUpdate(arg_const_reference<typename M::KeyType> key,
+                      arg_const_reference<V> value) override final
+        {
+            Q_UNUSED(value)
+            if (!m_parent.m_listeningDataStore) {
+                return;
+            }
+
+            auto it = std::find_if(std::begin(m_parent.m_data), std::end(m_parent.m_data), [&key, this](const V *v) {
+                return m_parent.m_mapper(*v) == key;
+            });
+
+            if (it == std::end(m_parent.m_data)) {
+                return;
+            }
+            typename S::size_type index = it - std::begin(m_parent.m_data);
+
+            using namespace std::placeholders;
+            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
+                          std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*(*it))));
+        }
+        void onInvalidation() override final
+        {
+            m_parent.m_dataStore = nullptr;
+            m_parent.m_data.clear();
+
+            using namespace std::placeholders;
+            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
+                          std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
+        }
+    private:
+        Model<V, M, S> &m_parent;
+    };
     class ListenBlockerLock
     {
     public:
@@ -202,7 +268,6 @@ private:
     private:
         bool &m_listeningDataStore;
     };
-
     void insert(typename S::iterator index, std::vector<V> &&values,
                 std::function<void (typename IModel<V, S>::IListener *, const std::vector<const V *> &)> &&function)
     {
@@ -224,62 +289,7 @@ private:
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
                       std::bind(function, _1, std::ref(buffer)));
     }
-    void onAdd(arg_const_reference<typename M::KeyType> key,
-               arg_const_reference<V> value) override
-    {
-        Q_UNUSED(key)
-        Q_UNUSED(value)
-    }
-    void onRemove(arg_const_reference<typename M::KeyType> key) override
-    {
-        if (!m_listeningDataStore) {
-            return;
-        }
-
-        auto it = std::find_if(std::begin(m_data), std::end(m_data), [&key, this](const V *v) {
-            return m_mapper(*v) == key;
-        });
-
-        if (it == std::end(m_data)) {
-            return;
-        }
-        typename S::size_type index = it - std::begin(m_data);
-        m_data.erase(it);
-
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
-    }
-    void onUpdate(arg_const_reference<typename M::KeyType> key,
-                  arg_const_reference<V> value) override
-    {
-        Q_UNUSED(value)
-        if (!m_listeningDataStore) {
-            return;
-        }
-
-        auto it = std::find_if(std::begin(m_data), std::end(m_data), [&key, this](const V *v) {
-            return m_mapper(*v) == key;
-        });
-
-        if (it == std::end(m_data)) {
-            return;
-        }
-        typename S::size_type index = it - std::begin(m_data);
-
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*(*it))));
-    }
-    void onInvalidation() override
-    {
-        m_dataStore = nullptr;
-        m_data.clear();
-
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
-    }
+    DataStoreListener m_listener;
     IDataStore<typename M::KeyType, V> *m_dataStore {nullptr};
     M m_mapper {};
     S m_data {};
