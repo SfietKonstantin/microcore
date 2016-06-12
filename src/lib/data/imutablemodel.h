@@ -29,29 +29,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MOCKITEMMODIFIERLISTENER_H
-#define MOCKITEMMODIFIERLISTENER_H
+#ifndef IMUTABLEMODEL_H
+#define IMUTABLEMODEL_H
 
-#include <gmock/gmock.h>
-#include "data/itemmodifier.h"
+#include "data/imodel.h"
+#include "data/type_helper.h"
 
 namespace microcore { namespace data {
 
-template<class Item, class Request, class Error>
-class MockItemModifierListener: public ItemModifier<Item, Request, Error>::Listener_t
+template<class T, class S>
+class IMutableModel: public IModel<T, S>
 {
 public:
-    ~MockItemModifierListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD0_T(onStart, void ());
-    MOCK_METHOD0_T(onFinish, void ());
-    MOCK_METHOD1_T(onError, void (const Error &error));
-    MOCK_METHOD1_T(onInvalidation, void (typename ItemModifier<Item, Request, Error>::Executor_t &source));
+    virtual void append(std::vector<T> &&values) = 0;
+    virtual void prepend(std::vector<T> &&values) = 0;
+    virtual void insert(typename S::size_type index, std::vector<T> &&values) = 0;
+    virtual void remove(typename S::size_type index) = 0;
+    virtual void update(typename S::size_type index, arg_rvalue_reference<T> value) = 0;
+    virtual void move(typename S::size_type oldIndex, typename S::size_type newIndex) = 0;
 };
 
 }}
 
-#endif // MOCKITEMMODIFIERLISTENER_H
+#endif // IMUTABLEMODEL_H

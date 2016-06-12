@@ -49,8 +49,8 @@ public:
      * @param onError callback used to indicate if the pipe has failed.
      */
     Pipe(const IJobFactory<Request, Result, Error> &factory,
-         typename IJob<Result, Error>::OnResult_t onResult,
-         typename IJob<Result, Error>::OnError_t onError)
+         typename IJob<Result, Error>::OnResult onResult,
+         typename IJob<Result, Error>::OnError onError)
         : m_factory {factory}
         , m_onResult {onResult}
         , m_onError {onError}
@@ -72,8 +72,8 @@ public:
     std::unique_ptr<Pipe<T, Request, Error>> prepend(const IJobFactory<T, Request, Error> &factory)
     {
         using namespace std::placeholders;
-        OnResult_t<Request> onResult {std::bind(&Pipe<Request, Result, Error>::send, this, _1)};
-        OnError_t onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
+        OnResult<Request> onResult {std::bind(&Pipe<Request, Result, Error>::send, this, _1)};
+        OnError onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
         return std::unique_ptr<Pipe<T, Request, Error>>(new Pipe<T, Request, Error>(factory, std::move(onResult), std::move(onError)));
     }
     /**
@@ -90,8 +90,8 @@ public:
     {
         Q_ASSERT(!m_job);
         using namespace std::placeholders;
-        OnResult_t<Result> onResult {std::bind(&Pipe<Request, Result, Error>::onResult, this, _1)};
-        OnError_t onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
+        OnResult<Result> onResult {std::bind(&Pipe<Request, Result, Error>::onResult, this, _1)};
+        OnError onError {std::bind(&Pipe<Request, Result, Error>::sendError, this, _1)};
         m_job = m_factory.create(std::move(request));
         m_job->execute(std::move(onResult), std::move(onError));
     }
@@ -108,16 +108,16 @@ public:
     }
 private:
     template<class T>
-    using OnResult_t = typename IJob<T, Error>::OnResult_t;
-    using OnError_t = typename IJob<Result, Error>::OnError_t;
+    using OnResult = typename IJob<T, Error>::OnResult;
+    using OnError = typename IJob<Result, Error>::OnError;
     void onResult(Result &&result)
     {
         m_onResult(std::move(result));
     }
     const IJobFactory<Request, Result, Error> &m_factory;
     std::unique_ptr<IJob<Result, Error>> m_job {};
-    OnResult_t<Result> m_onResult {};
-    OnError_t m_onError {};
+    OnResult<Result> m_onResult {};
+    OnError m_onError {};
 };
 
 }}

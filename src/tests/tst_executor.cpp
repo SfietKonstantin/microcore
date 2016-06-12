@@ -80,33 +80,33 @@ public:
     void onStart()
     {
         clear();
-        currentType = Type::Start;
+        type = Type::Start;
     }
     void onFinish()
     {
         clear();
-        currentType = Type::Finish;
+        type = Type::Finish;
     }
-    void onError(const Error &error)
+    void onError(const Error &e)
     {
         clear();
-        currentType = Type::Error;
-        currentError = std::move(error);
+        type = Type::Error;
+        error = std::move(e);
     }
     void onInvalidation(Executor<Error> &source)
     {
         clear();
-        currentType = Type::Invalidation;
+        type = Type::Invalidation;
         invalidatedSource = &source;
     }
     void clear()
     {
-        currentType = Type::None;
-        currentError = Error();
+        type = Type::None;
+        error = Error();
         invalidatedSource = nullptr;
     }
-    Type currentType {Type::None};
-    Error currentError {};
+    Type type {Type::None};
+    Error error {};
     Executor<Error> *invalidatedSource {nullptr};
 };
 
@@ -150,11 +150,11 @@ TEST_F(TstExecutor, TestStart)
     EXPECT_FALSE(m_executor->testCanStart());
     EXPECT_TRUE(m_executor->testCanFinish());
 
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Start);
     m_listenerData.clear();
 
     m_executor->testStart();
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 }
 
 TEST_F(TstExecutor, TestFinish)
@@ -172,11 +172,11 @@ TEST_F(TstExecutor, TestFinish)
     EXPECT_TRUE(m_executor->testCanStart());
     EXPECT_FALSE(m_executor->testCanFinish());
 
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Finish);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Finish);
     m_listenerData.clear();
 
     m_executor->testFinish();
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 }
 
 TEST_F(TstExecutor, TestError)
@@ -195,22 +195,22 @@ TEST_F(TstExecutor, TestError)
     EXPECT_FALSE(m_executor->testCanFinish());
 
 
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_listenerData.currentError.id(), "test");
-    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Error);
+    EXPECT_EQ(m_listenerData.error.id(), "test");
+    EXPECT_EQ(m_listenerData.error.message(), QLatin1String("Error message"));
+    EXPECT_EQ(m_listenerData.error.data(), QByteArray("Error data"));
 
     m_listenerData.clear();
 
     m_executor->testError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 }
 
 TEST_F(TstExecutor, TestListenerDelayAddStart)
 {
     m_executor->testStart();
     m_executor->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Start);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Start);
 }
 
 TEST_F(TstExecutor, TestListenerDelayAddError)
@@ -218,20 +218,20 @@ TEST_F(TstExecutor, TestListenerDelayAddError)
     m_executor->testStart();
     m_executor->testError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
     m_executor->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Error);
-    EXPECT_EQ(m_listenerData.currentError.id(), "test");
-    EXPECT_EQ(m_listenerData.currentError.message(), QLatin1String("Error message"));
-    EXPECT_EQ(m_listenerData.currentError.data(), QByteArray("Error data"));
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Error);
+    EXPECT_EQ(m_listenerData.error.id(), "test");
+    EXPECT_EQ(m_listenerData.error.message(), QLatin1String("Error message"));
+    EXPECT_EQ(m_listenerData.error.data(), QByteArray("Error data"));
 }
 
 TEST_F(TstExecutor, TestListenerInvalidation)
 {
     m_executor->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 
     TestExecutor *oldExecutor = m_executor.get();
     m_executor.reset();
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Invalidation);
+    EXPECT_EQ(m_listenerData.type, ListenerData::Type::Invalidation);
     EXPECT_EQ(m_listenerData.invalidatedSource, oldExecutor);
     m_invalidated = true;
 }

@@ -70,7 +70,7 @@ Q_SIGNALS:
     void error();
 protected:
     using Error_t = ::microcore::error::Error;
-    using Executor_t = ::microcore::core::Executor<Error_t>;
+    using Executor_t = ::microcore::core::Executor< ::microcore::error::Error>;
     explicit ViewController(QObject *parent = nullptr);
     Executor_t & addExecutor(std::unique_ptr<Executor_t> executor);
     template<class Executor, class Request>

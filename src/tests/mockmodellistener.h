@@ -29,16 +29,16 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MOCKMODELLISTENER_H
-#define MICROCORE_DATA_MOCKMODELLISTENER_H
+#ifndef MICROCORE_DATA_MOCKIMODELLISTENER_H
+#define MICROCORE_DATA_MOCKIMODELLISTENER_H
 
 #include <gmock/gmock.h>
 #include "data/model.h"
 
 namespace microcore { namespace data {
 
-template<class Data, class Store>
-class MockModelListener: public ModelBase<Data, Store>::IListener
+template<class V>
+class MockModelListener: public IModel<V, std::deque<const V *>>::IListener
 {
 public:
     ~MockModelListener()
@@ -46,14 +46,15 @@ public:
         onDestroyed();
     }
     MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD1_T(onAppend, void (const typename ModelBase<Data, Store>::NotificationItems_t &items));
-    MOCK_METHOD1_T(onPrepend, void (const typename ModelBase<Data, Store>::NotificationItems_t &items));
-    MOCK_METHOD2_T(onUpdate, void (std::size_t index, typename ModelBase<Data, Store>::NotificationItem_t item));
+    MOCK_METHOD1_T(onAppend, void (const std::vector<const V *> &values));
+    MOCK_METHOD1_T(onPrepend, void (const std::vector<const V *> &values));
+    MOCK_METHOD2_T(onInsert, void (std::size_t index, const std::vector<const V *> &values));
     MOCK_METHOD1_T(onRemove, void (std::size_t index));
-    MOCK_METHOD2_T(onMove, void (std::size_t from, std::size_t to));
+    MOCK_METHOD2_T(onUpdate, void (std::size_t index, const V &value));
+    MOCK_METHOD2_T(onMove, void (std::size_t oldIndex, std::size_t newIndex));
     MOCK_METHOD0_T(onInvalidation, void ());
 };
 
 }}
 
-#endif // MICROCORE_DATA_MOCKMODELLISTENER_H
+#endif // MICROCORE_DATA_MOCKIMODELLISTENER_H

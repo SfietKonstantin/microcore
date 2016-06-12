@@ -34,13 +34,14 @@
 
 #include "iviewmodel.h"
 #include "viewmodelcontroller.h"
-#include "data/model.h"
+#include "data/imodel.h"
 #include "qt/qobjectptr.h"
+#include <deque>
 
 namespace microcore { namespace qt {
 
-template<class Model, class DataObject>
-class ViewModel: public IViewModel, public Model::IListener
+template<class Type, class Storage, class ObjectType>
+class ViewModel: public IViewModel, public ::microcore::data::IModel<Type, Storage>::IListener
 {
 public:
     ~ViewModel()
@@ -68,7 +69,7 @@ public:
     }
     void setController(QObject *controllerObject) override final
     {
-        Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);
+        ControllerType *controller = dynamic_cast<ControllerType *>(controllerObject);
         if (m_controller != controller) {
             if (m_controller) {
                 m_controller->model().removeListener(*this);
@@ -86,34 +87,32 @@ public:
         return rowCount();
     }
 protected:
-    using StoredItem_t = QObjectPtr<DataObject>;
-    using Storage_t = std::deque<StoredItem_t>;
     explicit ViewModel(QObject *parent = nullptr)
         : IViewModel(parent)
     {
     }
-    Storage_t m_items {};
+    std::deque<QObjectPtr<ObjectType>> m_items {};
 private:
-    using Controller_t = ViewModelController<Model>;
-    void onAppend(const typename Model::NotificationItems_t &items) override final
+    using ControllerType = ViewModelController< ::microcore::data::IModel<Type, Storage>>;
+    void onAppend(const std::vector<const Type *> &items) override final
     {
         beginInsertRows(QModelIndex(), rowCount(), rowCount() + items.size() - 1);
-        std::for_each(std::begin(items), std::end(items), [this](typename Model::NotificationItem_t item) {
-            m_items.emplace_back(DataObject::create(*item, this));
+        std::for_each(std::begin(items), std::end(items), [this](const Type *item) {
+            m_items.emplace_back(ObjectType::create(*item, this));
         });
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onPrepend(const typename Model::NotificationItems_t &items) override final
+    void onPrepend(const std::vector<const Type *> &items) override final
     {
         beginInsertRows(QModelIndex(), 0, items.size() - 1);
-        std::for_each(items.rbegin(), items.rend(), [this](typename Model::NotificationItem_t item) {
-            m_items.emplace_front(DataObject::create(*item, this));
+        std::for_each(items.rbegin(), items.rend(), [this](const Type *item) {
+            m_items.emplace_front(ObjectType::create(*item, this));
         });
         Q_EMIT countChanged();
         endInsertRows();
     }
-    void onUpdate(std::size_t index, typename Model::NotificationItem_t item) override final
+    void onUpdate(typename Storage::size_type index, const Type &item) override final
     {
         int indexInt = static_cast<int>(index);
         if (indexInt >= rowCount()) {
@@ -144,6 +143,7 @@ private:
         if (m_controller != nullptr) {
             m_controller = nullptr;
             Q_EMIT controllerChanged();
+            refreshData();
         }
     }
     void refreshData()
@@ -152,11 +152,11 @@ private:
             return;
         }
 
-        Storage_t newItems;
+        std::deque<QObjectPtr<ObjectType>> newItems;
         if (m_controller != nullptr) {
-            Model &model = m_controller->model();
-            std::for_each(std::begin(model), std::end(model), [&newItems, this](typename Model::NotificationItem_t item) {
-                newItems.emplace_back(DataObject::create(*item, this));
+            ::microcore::data::IModel<Type, Storage> &model = m_controller->model();
+            std::for_each(std::begin(model), std::end(model), [&newItems, this](const Type *item) {
+                newItems.emplace_back(ObjectType::create(*item, this));
             });
         }
 
@@ -196,13 +196,13 @@ private:
         }
 
         std::size_t toIndex = (to < from) ? to : to - 1;
-        StoredItem_t item = std::move(*(std::begin(m_items) + from));
+        QObjectPtr<ObjectType> item = std::move(*(std::begin(m_items) + from));
         m_items.erase(std::begin(m_items) + from);
         m_items.insert(std::begin(m_items) + toIndex, std::move(item));
         endMoveRows();
     }
     bool m_complete {false};
-    Controller_t *m_controller {nullptr};
+    ControllerType *m_controller {nullptr};
 };
 
 }}

@@ -108,8 +108,8 @@ protected:
     void SetUp() override final
     {
         using namespace std::placeholders;
-        CJob::OnResult_t onResult {std::bind(&TstPipe::onResult, this, _1)};
-        CJob::OnError_t onError {std::bind(&TstPipe::onError, this, _1)};
+        CJob::OnResult onResult {std::bind(&TstPipe::onResult, this, _1)};
+        CJob::OnError onError {std::bind(&TstPipe::onError, this, _1)};
 
         m_bcPipe.reset(new BCPipe(m_bcFactory, std::move(onResult), std::move(onError)));
         m_abPipe = m_bcPipe->prepend<ResultA>(m_abFactory);
@@ -136,7 +136,7 @@ TEST_F(TstPipe, TestSuccess)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult onResult, BJob::OnError) {
            onResult(ResultB(2));
         }));
         return returned;
@@ -144,7 +144,7 @@ TEST_F(TstPipe, TestSuccess)
     EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
-        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t onResult, CJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult onResult, CJob::OnError) {
            onResult(ResultC(3));
         }));
         return returned;
@@ -163,7 +163,7 @@ TEST_F(TstPipe, TestError1)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t onResult, BJob::OnError_t) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult onResult, BJob::OnError) {
            onResult(ResultB(2));
         }));
         return returned;
@@ -171,7 +171,7 @@ TEST_F(TstPipe, TestError1)
     EXPECT_CALL(m_bcFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_bcFactory, mockCreate(ResultB(2))).Times(1).WillRepeatedly(Invoke([](const ResultB &) {
         std::unique_ptr<CJob> returned (new CJob);
-        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult_t, CJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](CJob::OnResult, CJob::OnError onError) {
            onError(Error(3));
         }));
         return returned;
@@ -190,7 +190,7 @@ TEST_F(TstPipe, TestError2)
     EXPECT_CALL(m_abFactory, mockCreate(_)).Times(0);
     EXPECT_CALL(m_abFactory, mockCreate(ResultA(1))).Times(1).WillRepeatedly(Invoke([](const ResultA &) {
         std::unique_ptr<BJob> returned (new BJob);
-        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult_t, BJob::OnError_t onError) {
+        EXPECT_CALL(*returned, executeImpl(_, _)).Times(1).WillRepeatedly(Invoke([](BJob::OnResult, BJob::OnError onError) {
            onError(Error(2));
         }));
         return returned;
@@ -236,7 +236,7 @@ public:
         : m_result(std::move(result))
     {
     }
-    void execute(OnResult_t &&onResult, OnError_t &&) override
+    void execute(OnResult &&onResult, OnError &&) override
     {
         onResult(std::move(m_result));
     }
@@ -260,7 +260,7 @@ public:
         : m_error(std::move(error))
     {
     }
-    void execute(OnResult_t &&, OnError_t &&onError) override
+    void execute(OnResult &&, OnError &&onError) override
     {
         onError(std::move(m_error));
     }
@@ -283,8 +283,8 @@ using TestOnlyMovablePipe = Pipe<TestOnlyMovable, TestOnlyMovable, TestOnlyMovab
 TEST_F(TstPipe, OnlyMovableConstructible)
 {
     TestOnlyMovableResultJobFactory factory;
-    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t onResult {testOnResult};
-    IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t onError {testOnError};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult onResult {testOnResult};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnError onError {testOnError};
 
     std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, onResult, onError)};
     std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(factory)};
@@ -297,8 +297,8 @@ TEST_F(TstPipe, OnlyMovableConstructibleWithError)
 {
     TestOnlyMovableResultJobFactory factory;
     TestOnlyMovableErrorJobFactory errorFactory;
-    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult_t onResult {testOnResult};
-    IJob<TestOnlyMovable, TestOnlyMovable>::OnError_t onError {testOnError};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnResult onResult {testOnResult};
+    IJob<TestOnlyMovable, TestOnlyMovable>::OnError onError {testOnError};
 
     std::unique_ptr<TestOnlyMovablePipe> pipe3 {new TestOnlyMovablePipe(factory, onResult, onError)};
     std::unique_ptr<TestOnlyMovablePipe> pipe2 {pipe3->prepend<TestOnlyMovable>(errorFactory)};

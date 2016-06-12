@@ -29,62 +29,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_DATASOURCEMODEL_H
-#define MICROCORE_DATA_DATASOURCEMODEL_H
+#ifndef IDATASTORE_H
+#define IDATASTORE_H
 
-#include "datasource.h"
-#include "model.h"
+#include "data/type_helper.h"
 
 namespace microcore { namespace data {
 
-template<class Key, class Data>
-class DataSourceModelAdaptor
+/**
+ * @brief Interface for a data store
+ *
+ * This interface describes a data store.
+ *
+ * A data store is used to store key-value pairs
+ * and notify that content of the store has changed.
+ *
+ * To add, remove or update the content of the store,
+ * the following methods must be implemented
+ * - add()
+ * - remove()
+ * - update()
+ *
+ * In addition, the data store use listeners to perform
+ * notifications. The following methods must be implemented
+ * to handle them
+ * - addListener()
+ * - removeListener()
+ */
+template<class K, class V>
+class IDataStore
 {
 public:
-    using DataSource_t = DataSource<Key, Data>;
-    using Key_t = const Data *;
-    using Item_t = Data;
-    using SourceItems_t = std::vector<Item_t>;
-    using OutputItems_t = std::vector<Key_t>;
-    explicit DataSourceModelAdaptor(std::unique_ptr<DataSource_t> source)
-        : m_source(std::move(source))
+    class IListener
     {
-    }
-    OutputItems_t add(SourceItems_t &&data)
-    {
-        OutputItems_t returned (data.size(), nullptr);
-        typename OutputItems_t::iterator it = std::begin(returned);
-        std::for_each(std::begin(data), std::end(data), [this, &it](const Item_t &item) {
-            *it = &(m_source->add(Item_t(item)));
-            ++it;
-        });
-        return returned;
-    }
-    bool remove(Key_t item)
-    {
-        return m_source->remove(*item);
-    }
-    bool update(Key_t key, Item_t &&value)
-    {
-        return m_source->update(*key, std::move(value));
-    }
-private:
-    std::unique_ptr<DataSource_t> m_source {};
-};
-
-template<class Key, class Data>
-class DataSourceModel: public ModelBase<Data, DataSourceModelAdaptor<Key, Data>>
-{
-public:
-    using DataSource_t = DataSource<Key, Data>;
-    explicit DataSourceModel(std::unique_ptr<DataSource_t> source)
-        : ModelBase<Data, Adaptor_t>(Adaptor_t(std::move(source)))
-    {
-    }
-private:
-    using Adaptor_t = DataSourceModelAdaptor<Key, Data>;
+    public:
+        virtual ~IListener() {}
+        virtual void onAdd(arg_const_reference<K> key, arg_const_reference<V> value) = 0;
+        virtual void onRemove(arg_const_reference<K> key) = 0;
+        virtual void onUpdate(arg_const_reference<K> key, arg_const_reference<V> value) = 0;
+        virtual void onInvalidation() = 0;
+    };
+    virtual ~IDataStore() {}
+    virtual const V * addUnique(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual const V & add(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual const V * update(arg_const_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual bool remove(arg_const_reference<K> key) = 0;
+    virtual void addListener(IDataStore<K, V>::IListener &listener) = 0;
+    virtual void removeListener(IDataStore<K, V>::IListener &listener) = 0;
 };
 
 }}
 
-#endif // MICROCORE_DATA_DATASOURCEMODEL_H
+#endif // IDATASTORE_H

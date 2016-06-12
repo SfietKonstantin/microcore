@@ -55,11 +55,11 @@ public:
     /**
      * @brief Type of the success callback
      */
-    using OnResult_t = std::function<void (Result &&)>;
+    using OnResult = std::function<void (Result &&)>;
     /**
      * @brief Type of the error callback
      */
-    using OnError_t = std::function<void (Error &&)>;
+    using OnError = std::function<void (Error &&)>;
     /**
      * @brief Destructor
      */
@@ -74,7 +74,7 @@ public:
      * @param onResult callback used to indicate if the job is successful.
      * @param onError callback used to indicate if the job has failed.
      */
-    virtual void execute(OnResult_t &&onResult, OnError_t &&onError) = 0;
+    virtual void execute(OnResult &&onResult, OnError &&onError) = 0;
 };
 
 }}

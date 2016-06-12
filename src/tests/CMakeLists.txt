@@ -36,14 +36,12 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_ijob.cpp
     includes/tst_core_ijobfactory.cpp
     includes/tst_core_pipe.cpp
-    includes/tst_data_dataoperator.cpp
-    includes/tst_data_datasource.cpp
-    includes/tst_data_datasourcemodel.cpp
     includes/tst_data_item.cpp
-    includes/tst_data_itemmodifier.cpp
+    includes/tst_data_idatastore.cpp
+    includes/tst_data_imodel.cpp
+    includes/tst_data_imutablemodel.cpp
     includes/tst_data_model.cpp
-    includes/tst_data_modelappender.cpp
-    includes/tst_data_modeldata.cpp
+    includes/tst_data_type_helper.cpp
     includes/tst_qt_qobjectptr.cpp
     includes/tst_qt_iviewitem.cpp
     includes/tst_qt_iviewmodel.cpp
@@ -60,19 +58,14 @@ set(${PROJECT_NAME}_SRCS
     mockjobfactory.h
     mockexecutorlistener.h
     mockmodellistener.h
-    mockmodelappenderlistener.h
     tst_main.cpp
     tst_executor.cpp
     tst_pipe.cpp
     tst_http.cpp
     tst_json.cpp
-    tst_datasource.cpp
-    tst_modeldata.cpp
+    tst_type_helper.cpp
+    tst_datastore.cpp
     tst_model.cpp
-    tst_datasourcemodel.cpp
-    tst_modelappender.cpp
-    tst_itemmodifier.cpp
-    tst_qtviewmodel.cpp
     tst_microgen_simple.cpp
 )
 

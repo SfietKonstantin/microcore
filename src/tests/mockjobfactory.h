@@ -41,20 +41,11 @@ template<class Request, class Result, class Error>
 class MockJobFactory : public IJobFactory<Request, Result, Error>
 {
 public:
-    using Job_t = IJob<Result, Error>;
-    std::unique_ptr<Job_t> create(Request &&request) const override final
+    std::unique_ptr<IJob<Result, Error>> create(Request &&request) const override final
     {
         return mockCreate(request);
     }
-    MOCK_CONST_METHOD1_T(mockCreate, std::unique_ptr<Job_t> (const Request &request));
-};
-
-template<class Result, class Error>
-class MockJobFactory<void, Result, Error>: public IJobFactory<void, Result, Error>
-{
-public:
-    using Job_t = IJob<Result, Error>;
-    MOCK_CONST_METHOD0_T(create, std::unique_ptr<Job_t> ());
+    MOCK_CONST_METHOD1_T(mockCreate, std::unique_ptr<IJob<Result, Error>> (const Request &request));
 };
 
 }}

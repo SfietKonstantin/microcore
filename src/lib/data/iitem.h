@@ -29,4 +29,31 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "data/modeldata.h"
+#ifndef MICROCORE_DATA_IITEM_H
+#define MICROCORE_DATA_IITEM_H
+
+#include "data/type_helper.h"
+
+namespace microcore { namespace data {
+
+template<class T>
+class IItem
+{
+public:
+    class IListener
+    {
+    public:
+         virtual ~IListener() {}
+         virtual void onUpdate(const T &value) = 0;
+         virtual void onInvalidation() = 0;
+    };
+    virtual ~IItem() {}
+    virtual const T & data() const = 0;
+    virtual void setData(T &&data) = 0;
+    virtual void addListener(IListener &listener) = 0;
+    virtual void removeListener(IListener &listener) = 0;
+};
+
+}}
+
+#endif // MICROCORE_DATA_IITEM_H

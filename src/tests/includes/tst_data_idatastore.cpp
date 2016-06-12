@@ -29,28 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_ITEMMODIFIER_H
-#define MICROCORE_DATA_ITEMMODIFIER_H
-
-#include "data/dataoperator.h"
-
-namespace microcore { namespace data {
-
-template<class Item, class Request, class Error>
-class ItemModifier: public DataOperator<Item, Request, typename Item::SourceItem_t, Error>
-{
-public:
-    using Result_t = typename Item::SourceItem_t;
-    using Factory_t = ::microcore::core::IJobFactory<Request, Result_t, Error>;
-    ItemModifier(Item &item, std::unique_ptr<Factory_t> factory)
-        : Parent_t(item, std::move(factory), OperatorFunction_t(&Item::setData))
-    {
-    }
-private:
-    using Parent_t = DataOperator<Item, Request, Result_t, Error>;
-    using OperatorFunction_t = std::function<void (Item &, Result_t &&)>;
-};
-
-}}
-
-#endif // MICROCORE_DATA_ITEMMODIFIER_H
+#include "data/idatastore.h"

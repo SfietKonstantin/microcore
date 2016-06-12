@@ -33,14 +33,14 @@
 #define MICROCORE_QT_VIEWITEM_H
 
 #include "iviewitem.h"
+#include "data/iitem.h"
 #include "viewitemcontroller.h"
-#include "data/model.h"
 #include "qt/qobjectptr.h"
 
 namespace microcore { namespace qt {
 
-template<class Item, class DataObject>
-class ViewItem: public IViewItem, public Item::IListener
+template<class Type, class ObjectType>
+class ViewItem: public IViewItem, public ::microcore::data::IItem<Type>::IListener
 {
 public:
     ~ViewItem()
@@ -67,7 +67,7 @@ public:
     }
     void setController(QObject *controllerObject) override final
     {
-        Controller_t *controller = dynamic_cast<Controller_t *>(controllerObject);
+        ControllerType *controller = dynamic_cast<ControllerType *>(controllerObject);
         if (m_controller != controller) {
             if (m_controller) {
                 m_controller->item().removeListener(*this);
@@ -81,15 +81,14 @@ public:
         }
     }
 protected:
-    using Data_t = QObjectPtr<DataObject>;
     explicit ViewItem(QObject *parent = nullptr)
         : IViewItem(parent)
     {
     }
-    Data_t m_data {};
+    QObjectPtr<ObjectType> m_data {};
 private:
-    using Controller_t = ViewItemController<Item>;
-    void onModified(const typename Item::SourceItem_t &data) override final
+    using ControllerType = ViewItemController< ::microcore::data::IItem<Type>>;
+    void onModified(const Type &data) override final
     {
         Q_UNUSED(data)
         refreshData();
@@ -110,13 +109,12 @@ private:
         if (m_controller == nullptr) {
             m_data.reset();
         } else {
-            m_data.reset(new DataObject(SourceItem_t(m_controller->item().data())));
+            m_data.reset(new ObjectType(Type(m_controller->item().data())));
         }
         Q_EMIT itemChanged();
     }
-    using SourceItem_t = typename Item::SourceItem_t;
     bool m_complete {false};
-    Controller_t *m_controller {nullptr};
+    ControllerType *m_controller {nullptr};
 };
 
 }}

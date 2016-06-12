@@ -30,11 +30,11 @@
  */
 
 #include <gtest/gtest.h>
+#include "data/datastore.h"
 #include "data/model.h"
 #include "mockmodellistener.h"
 
 using namespace ::testing;
-using namespace ::microcore::core;
 using namespace ::microcore::data;
 
 namespace {
@@ -43,9 +43,31 @@ class Result
 {
 public:
     explicit Result() = default;
-    explicit Result(int v) : value {v} {}
+    explicit Result(int v) : key {v}, value {v} {}
+    explicit Result (int k, int v) : key {k}, value {v} {}
     DEFAULT_COPY_DEFAULT_MOVE(Result);
+    int key {0};
     int value {0};
+};
+
+class ResultMapper
+{
+public:
+    using KeyType = int;
+    int operator()(const Result &result) const
+    {
+        return result.key;
+    }
+};
+
+class ResultDataStore: public DataStore<int, Result>
+{
+public:
+    explicit ResultDataStore() = default;
+    std::map<int, Result> & data()
+    {
+        return m_data;
+    }
 };
 
 class ListenerData
@@ -56,81 +78,112 @@ public:
         None,
         Append,
         Prepend,
+        Insert,
         Remove,
         Update,
         Move,
         Invalidation
     };
     explicit ListenerData() = default;
-    void onAppend(const std::vector<const Result *> &items)
+    explicit ListenerData(Type t)
+        : type(t)
     {
-        clear();
-        currentType = Type::Append;
-        currentItems = items;
     }
-    void onPrepend(const std::vector<const Result *> &items)
+    explicit ListenerData(Type t, const std::vector<const Result *> &v)
+        : type(t), values(v)
     {
-        clear();
-        currentType = Type::Prepend;
-        currentItems = items;
+    }
+    explicit ListenerData(Type t, int i)
+        : type(t), index1(i)
+    {
+    }
+    explicit ListenerData(Type t, int i, const Result &v)
+        : type(t), value(&v), index1(i)
+    {
+    }
+    explicit ListenerData(Type t, int i, const std::vector<const Result *> &v)
+        : type(t), values(v), index1(i)
+    {
+    }
+    explicit ListenerData(Type t, int i1, int i2)
+        : type(t), index1(i1), index2(i2)
+    {
+    }
+    Type type {Type::None};
+    const Result *value {nullptr};
+    std::vector<const Result *> values {};
+    int index1 {-1};
+    int index2 {-1};
+};
+
+class ListenerWatcher
+{
+public:
+    explicit ListenerWatcher() = default;
+    const ListenerData & operator[](std::size_t index) const
+    {
+        return m_data[index];
+    }
+    int count() const
+    {
+        return static_cast<int>(m_data.size());
+    }
+    void clear()
+    {
+        m_data.clear();
+    }
+    void onAppend(const std::vector<const Result *> &values)
+    {
+        m_data.emplace_back(ListenerData::Type::Append, values);
+    }
+    void onPrepend(const std::vector<const Result *> &values)
+    {
+        m_data.emplace_back(ListenerData::Type::Prepend, values);
+    }
+    void onInsert(std::size_t index, const std::vector<const Result *> &values)
+    {
+        m_data.emplace_back(ListenerData::Type::Insert, static_cast<int>(index), values);
     }
     void onRemove(std::size_t index)
     {
-        clear();
-        currentType = Type::Remove;
-        currentIndex = static_cast<int>(index);
+        m_data.emplace_back(ListenerData::Type::Remove, static_cast<int>(index));
     }
-    void onUpdate(std::size_t index, const Result *item)
+    void onUpdate(std::size_t index, const Result &value)
     {
-        Q_UNUSED(item)
-        clear();
-        currentType = Type::Update;
-        currentIndex = static_cast<int>(index);
+        m_data.emplace_back(ListenerData::Type::Update, static_cast<int>(index), value);
     }
-    void onMove(std::size_t first, std::size_t second)
+    void onMove(std::size_t oldIndex, std::size_t newIndex)
     {
-        clear();
-        currentType = Type::Move;
-        currentIndex = static_cast<int>(first);
-        currentIndex2 = static_cast<int>(second);
+        m_data.emplace_back(ListenerData::Type::Move, static_cast<int>(oldIndex), static_cast<int>(newIndex));
     }
     void onInvalidation()
     {
-        clear();
-        currentType = Type::Invalidation;
+        m_data.emplace_back(ListenerData::Type::Invalidation);
     }
-    Type currentType {Type::None};
-    std::vector<const Result *> currentItems {};
-    int currentIndex {-1};
-    int currentIndex2 {-1};
 private:
-    void clear()
-    {
-        currentType = Type::None;
-        currentItems.clear();
-        currentIndex = -1;
-        currentIndex2 = -1;
-    }
+    std::vector<ListenerData> m_data {};
 };
 
+using ResultModel = Model<Result, ResultMapper>;
+using ResultModelListener = MockModelListener<Result>;
+
 }
-
-using TestModel = Model<Result>;
-using MockTestModelListener = MockModelListener<Result, ModelData<Result>>;
-
 class TstModel: public Test
 {
 protected:
     void SetUp()
     {
-        m_model.reset(new TestModel());
+        m_dataStore.reset(new ResultDataStore());
+        m_model.reset(new ResultModel(*m_dataStore));
         EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModel *>(this), &TstModel::invalidateOnDestroyed));
-        ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onAppend));
-        ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onPrepend));
-        ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onUpdate));
-        ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onRemove));
-        ON_CALL(m_listener, onMove(_, _)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onMove));
-        ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
+        ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onAppend));
+        ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onPrepend));
+        ON_CALL(m_listener, onInsert(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInsert));
+        ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onRemove));
+        ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
+        ON_CALL(m_listener, onMove(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onMove));
+        ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
+        m_model->addListener(m_listener);
     }
     void invalidateOnDestroyed()
     {
@@ -138,369 +191,535 @@ protected:
             m_model->removeListener(m_listener);
         }
     }
-    std::unique_ptr<TestModel> m_model {};
-    NiceMock<MockTestModelListener> m_listener {};
-    ListenerData m_listenerData {};
+    std::unique_ptr<ResultDataStore> m_dataStore {};
+    std::unique_ptr<ResultModel> m_model {};
+    NiceMock<ResultModelListener> m_listener {};
+    ListenerWatcher m_watcher {};
     bool m_invalidated {false};
 };
 
-
-TEST_F(TstModel, BaseOperations)
+TEST_F(TstModel, InvalidationChain1)
 {
-    {
-        EXPECT_TRUE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(0));
-    }
+    m_model.reset();
+    m_invalidated = true;
+    m_dataStore.reset();
+}
+
+TEST_F(TstModel, InvalidationChain2)
+{
+    m_dataStore.reset();
+    m_model.reset();
+    m_invalidated = true;
+}
+
+TEST_F(TstModel, Append)
+{
     m_model->append({Result(1), Result(2)});
     {
-        EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+        EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Append);
+        EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_watcher[0].values[0]);
         ++it;
-        EXPECT_EQ((*it)->value, 2);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[0].values[1]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
     m_model->append({Result(3), Result(4), Result(5)});
     {
-        EXPECT_FALSE(m_model->empty());
         EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Append);
+        EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
         ++it;
-        EXPECT_EQ((*it)->value, 2);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
         ++it;
-        EXPECT_EQ((*it)->value, 3);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_watcher[1].values[0]);
         ++it;
-        EXPECT_EQ((*it)->value, 4);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_watcher[1].values[1]);
         ++it;
-        EXPECT_EQ((*it)->value, 5);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    m_model->remove(1);
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(4));
-
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 4);
-        ++it;
-        EXPECT_EQ((*it)->value, 5);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    m_model->prepend({Result(6)});
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
-
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 6);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 4);
-        ++it;
-        EXPECT_EQ((*it)->value, 5);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_TRUE(m_model->move(0, 2));
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 6);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 4);
-        ++it;
-        EXPECT_EQ((*it)->value, 5);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_TRUE(m_model->move(2, 0));
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 6);
-        ++it;
-        EXPECT_EQ((*it)->value, 4);
-        ++it;
-        EXPECT_EQ((*it)->value, 5);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_TRUE(m_model->update(2, Result(2)));
-    {
-        EXPECT_FALSE(m_model->empty());
-        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_EQ((*it)->value, 4);
-        ++it;
-        EXPECT_EQ((*it)->value, 5);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_watcher[1].values[2]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, InvalidOperations)
+TEST_F(TstModel, AppendAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
-    EXPECT_FALSE(m_model->update(2, Result(3)));
-    EXPECT_FALSE(m_model->remove(2));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+    }
+    m_dataStore.reset();
+    EXPECT_TRUE(m_model->empty());
+    m_model->append({Result(3), Result(4), Result(5)});
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Invalidation);
+    }
 }
 
-template<class Data>
-class MockStore
+TEST_F(TstModel, Prepend)
 {
-public:
-    std::vector<const Data *> add(std::vector<Data> &&data)
+    m_model->prepend({Result(1), Result(2)});
     {
-        return std::accumulate(std::begin(data), std::end(data), std::vector<const Data *>(),
-                               [](std::vector<const Data *> &input, const Data &) {
-            input.push_back(nullptr);
-            return input;
-        });
-    }
-    bool remove(const Data *data)
-    {
-        Q_UNUSED(data)
-        return false;
-    }
-    bool update(const Data *key, Data &&value)
-    {
-        Q_UNUSED(key)
-        Q_UNUSED(value)
-        return false;
-    }
-};
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+        EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Prepend);
+        EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
-class InvalidModel final : public ModelBase<Result, MockStore<Result>>
-{
-public:
-    explicit InvalidModel()
-        : ModelBase<Result, MockStore<Result>>(MockStore<Result>())
-    {
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_watcher[0].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[0].values[1]);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
     }
-};
+    m_model->prepend({Result(3), Result(4), Result(5)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Prepend);
+        EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
 
-TEST_F(TstModel, InvalidOperations2)
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_watcher[1].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_watcher[1].values[1]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_watcher[1].values[2]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, PrependAfterInvalidation)
 {
-    InvalidModel model {};
-    model.append({Result(1), Result(2)});
-    EXPECT_FALSE(model.update(0, Result(3)));
-    EXPECT_FALSE(model.remove(0));
+    m_model->append({Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+    }
+    m_dataStore.reset();
+    EXPECT_TRUE(m_model->empty());
+    m_model->prepend({Result(3), Result(4), Result(5)});
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Invalidation);
+    }
+}
+
+TEST_F(TstModel, Insert)
+{
+    m_model->insert(0, {Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+        EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Insert);
+        EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_watcher[0].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[0].values[1]);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+    m_model->insert(2, {Result(3), Result(4), Result(5)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Insert);
+        EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_watcher[1].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_watcher[1].values[1]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_watcher[1].values[2]);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+
+    }
+    m_model->insert(3, {Result(6)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(6));
+        EXPECT_EQ(m_watcher.count(), 3);
+        EXPECT_EQ(m_watcher[2].type, ListenerData::Type::Insert);
+        EXPECT_EQ(m_watcher[2].values.size(), static_cast<std::size_t>(1));
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(6)));
+        EXPECT_EQ(*it, m_watcher[2].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, InsertFailed)
+{
+    m_model->insert(1, {Result(0)});
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 0);
+    }
+    m_model->append({Result(1), Result(2)});
+    m_model->insert(3, {Result(3), Result(4), Result(5)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, InsertAfterInvalidation)
+{
+    m_model->append({Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+    }
+    m_dataStore.reset();
+    EXPECT_TRUE(m_model->empty());
+    m_model->insert(1, {Result(3), Result(4), Result(5)});
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Invalidation);
+    }
+}
+
+TEST_F(TstModel, Update)
+{
+    m_model->append({Result(1), Result(2)});
+    m_model->update(1, Result(2, 3));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ((*it)->value, 1);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[1].value);
+        EXPECT_EQ((*it)->value, 3);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, UpdateFailed)
+{
+    m_model->update(1, Result(0));
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 0);
+    }
+    m_model->append({Result(1), Result(2)});
+    m_model->update(3, Result(3));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, UpdateImpactKeys)
+{
+    m_model->append({Result(1), Result(2)});
+    m_model->update(1, Result(3));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, UpdateAfterInvalidation)
+{
+    m_model->append({Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+    }
+    m_dataStore.reset();
+    EXPECT_TRUE(m_model->empty());
+    m_model->update(1, Result(2, 3));
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Invalidation);
+    }
+}
+
+TEST_F(TstModel, Remove)
+{
+    m_model->append({Result(1), Result(2)});
+    m_model->remove(1);
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(1));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Remove);
+        EXPECT_EQ(m_watcher[1].index1, 1);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, RemoveFailed)
+{
+    m_model->remove(1);
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 0);
+    }
+    m_model->append({Result(1), Result(2)});
+    m_model->remove(3);
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, RemoveAfterInvalidation)
+{
+    m_model->append({Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+    }
+    m_dataStore.reset();
+    EXPECT_TRUE(m_model->empty());
+    m_model->remove(1);
+    {
+        EXPECT_TRUE(m_model->empty());
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Invalidation);
+    }
 }
 
 TEST_F(TstModel, Move)
 {
-    m_model->append({Result(1), Result(2), Result(3)});
-    EXPECT_FALSE(m_model->move(0, 0));
-    EXPECT_FALSE(m_model->move(0, 1));
-    EXPECT_TRUE(m_model->move(0, 2));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_TRUE(m_model->move(0, 3));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-
-    EXPECT_TRUE(m_model->move(1, 0));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_FALSE(m_model->move(1, 1));
-    EXPECT_FALSE(m_model->move(1, 2));
-    EXPECT_TRUE(m_model->move(1, 3));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-
-    EXPECT_TRUE(m_model->move(2, 0));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_TRUE(m_model->move(2, 1));
-    {
-        auto it = std::begin(*m_model);
-        EXPECT_EQ((*it)->value, 1);
-        ++it;
-        EXPECT_EQ((*it)->value, 2);
-        ++it;
-        EXPECT_EQ((*it)->value, 3);
-        ++it;
-        EXPECT_TRUE(it == std::end(*m_model));
-    }
-    EXPECT_FALSE(m_model->move(2, 2));
-    EXPECT_FALSE(m_model->move(2, 3));
-
-    EXPECT_FALSE(m_model->move(3, 0));
-    EXPECT_FALSE(m_model->move(3, 1));
-    EXPECT_FALSE(m_model->move(3, 2));
-    EXPECT_FALSE(m_model->move(3, 3));
-}
-
-TEST_F(TstModel, TestListener)
-{
-    m_model->addListener(m_listener);
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
-    }
-    m_model->append({Result(1), Result(2)});
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
-        auto modelIt = std::begin(*m_model);
-        auto listenerIt = std::begin(m_listenerData.currentItems);
-        EXPECT_EQ(m_listenerData.currentItems.size(), static_cast<std::size_t>(2));
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_TRUE(modelIt == std::end(*m_model));
-        EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
-    }
-    m_model->append({Result(3), Result(4), Result(5)});
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
-        auto modelIt = std::begin(*m_model);
-        auto listenerIt = std::begin(m_listenerData.currentItems);
-        ++modelIt;
-        ++modelIt;
-        EXPECT_EQ(m_listenerData.currentItems.size(), static_cast<std::size_t>(3));
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_TRUE(modelIt == std::end(*m_model));
-        EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
-    }
-    m_model->remove(1);
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Remove);
-        EXPECT_EQ(m_listenerData.currentIndex, 1);
-    }
-    m_model->prepend({Result(6)});
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Prepend);
-        auto modelIt = std::begin(*m_model);
-        auto listenerIt = std::begin(m_listenerData.currentItems);
-        EXPECT_EQ(m_listenerData.currentItems.size(), static_cast<std::size_t>(1));
-        EXPECT_EQ(*modelIt, *listenerIt);
-        ++modelIt;
-        ++listenerIt;
-        EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
-    }
+    m_model->append({Result(1), Result(2), Result(3), Result(4), Result(5)});
     m_model->move(0, 2);
     {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Move);
-        EXPECT_EQ(m_listenerData.currentIndex, 0);
-        EXPECT_EQ(m_listenerData.currentIndex2, 2);
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Move);
+        EXPECT_EQ(m_watcher[1].index1, 0);
+        EXPECT_EQ(m_watcher[1].index2, 2);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
     }
     m_model->move(2, 0);
     {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Move);
-        EXPECT_EQ(m_listenerData.currentIndex, 2);
-        EXPECT_EQ(m_listenerData.currentIndex2, 0);
-    }
-    m_model->update(2, Result(2));
-    {
-        EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Update);
-        EXPECT_EQ(m_listenerData.currentIndex, 2);
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(5));
+        EXPECT_EQ(m_watcher.count(), 3);
+        EXPECT_EQ(m_watcher[2].type, ListenerData::Type::Move);
+        EXPECT_EQ(m_watcher[2].index1, 2);
+        EXPECT_EQ(m_watcher[2].index2, 0);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, TestListenerDelayAdd)
+TEST_F(TstModel, MoveFailed)
+{
+    m_model->append({Result(1), Result(2), Result(3), Result(4), Result(5)});
+    m_model->move(5, 2);
+    {
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+    m_model->move(2, 6);
+    {
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+    m_model->move(2, 2);
+    {
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+    m_model->move(2, 3);
+    {
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, ExternalUpdate)
 {
     m_model->append({Result(1), Result(2)});
-    m_model->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Append);
-    auto modelIt = std::begin(*m_model);
-    auto listenerIt = std::begin(m_listenerData.currentItems);
-    EXPECT_EQ(m_listenerData.currentItems.size(), static_cast<std::size_t>(2));
-    EXPECT_EQ(*modelIt, *listenerIt);
-    ++modelIt;
-    ++listenerIt;
-    EXPECT_EQ(*modelIt, *listenerIt);
-    ++modelIt;
-    ++listenerIt;
-    EXPECT_TRUE(modelIt == std::end(*m_model));
-    EXPECT_TRUE(listenerIt == std::end(m_listenerData.currentItems));
+    m_dataStore->update(2, Result(2, 3));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ((*it)->value, 1);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[1].value);
+        EXPECT_EQ((*it)->value, 3);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
 }
 
-TEST_F(TstModel, TestListenerInvalidation)
+TEST_F(TstModel, ExternalUpdateFailed)
+{
+    m_model->append({Result(1), Result(2)});
+    m_dataStore->addUnique(3, Result(3));
+    m_dataStore->update(3, Result(3, 4));
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, ExternalRemove)
+{
+    m_model->append({Result(1), Result(2)});
+    m_dataStore->remove(2);
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(1));
+        EXPECT_EQ(m_watcher.count(), 2);
+        EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Remove);
+        EXPECT_EQ(m_watcher[1].index1, 1);
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, ExternalRemoveFailed)
+{
+    m_model->append({Result(1), Result(2)});
+    m_dataStore->addUnique(3, Result(3));
+    m_dataStore->remove(3);
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+    }
+}
+
+TEST_F(TstModel, Accessors)
+{
+    m_model->append({Result(1), Result(2)});
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+
+        const ResultModel &constModel = *m_model;
+        auto it = std::begin(*m_model);
+        auto constIt = std::begin(constModel);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ((*constIt), &(m_dataStore->data().at(1)));
+        EXPECT_EQ(constModel[0], &(m_dataStore->data().at(1)));
+        ++it;
+        ++constIt;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ((*constIt), &(m_dataStore->data().at(2)));
+        EXPECT_EQ(constModel[1], &(m_dataStore->data().at(2)));
+        ++it;
+        ++constIt;
+        EXPECT_TRUE(it == std::end(*m_model));
+        EXPECT_TRUE(it == std::end(constModel));
+        EXPECT_EQ(constModel[2], nullptr);
+    }
+}
+
+TEST_F(TstModel, ListenerDelayAdd)
+{
+    m_model->removeListener(m_listener);
+    m_model->append({Result(1), Result(2)});
+    m_model->addListener(m_listener);
+    {
+        EXPECT_EQ(m_model->size(), static_cast<std::size_t>(2));
+        EXPECT_EQ(m_watcher.count(), 1);
+        EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Append);
+        EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
+
+        auto it = std::begin(*m_model);
+        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_watcher[0].values[0]);
+        ++it;
+        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_watcher[0].values[1]);
+        ++it;
+        EXPECT_TRUE(it == std::end(*m_model));
+    }
+}
+
+TEST_F(TstModel, ListenerInvalidation)
 {
     m_model->addListener(m_listener);
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::None);
+    EXPECT_EQ(m_watcher.count(), 0);
 
     m_model.reset();
-    EXPECT_EQ(m_listenerData.currentType, ListenerData::Type::Invalidation);
+    EXPECT_EQ(m_watcher.count(), 1);
+    EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Invalidation);
     m_invalidated = true;
 }

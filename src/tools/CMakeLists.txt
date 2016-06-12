@@ -15,6 +15,7 @@ set(${PROJECT_NAME}_SRCS
     typesjson.h.tpl
     factory.h.tpl
     factoryjson.cpp.tpl
+    factorylistjson.cpp.tpl
 )
 
 add_custom_target(${PROJECT_NAME}

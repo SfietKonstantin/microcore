@@ -53,8 +53,8 @@ protected:
     void SetUp() override final
     {
         using namespace std::placeholders;
-        JsonJob::OnResult_t onResult {std::bind(&TstJson::onResult, this, _1)};
-        JsonJob::OnError_t onError {std::bind(&TstJson::onError, this, _1)};
+        JsonJob::OnResult onResult {std::bind(&TstJson::onResult, this, _1)};
+        JsonJob::OnError onError {std::bind(&TstJson::onError, this, _1)};
 
         m_factory.reset(new JsonRequestFactory());
         m_pipe.reset(new JsonPipe(*m_factory, std::move(onResult), std::move(onError)));

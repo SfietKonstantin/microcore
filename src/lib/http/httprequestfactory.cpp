@@ -45,7 +45,7 @@ public:
         , m_request {std::move(request)}
     {
     }
-    void execute(OnResult_t &&onResult, OnError_t &&onError) override
+    void execute(OnResult &&onResult, OnError &&onError) override
     {
         QNetworkReply *reply {nullptr};
         switch (m_request.type()) {

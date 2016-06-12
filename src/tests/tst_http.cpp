@@ -51,8 +51,8 @@ protected:
     void SetUp() override final
     {
         using namespace std::placeholders;
-        HttpJob::OnResult_t onResult {std::bind(&TstHttp::onResult, this, _1)};
-        HttpJob::OnError_t onError {std::bind(&TstHttp::onError, this, _1)};
+        HttpJob::OnResult onResult {std::bind(&TstHttp::onResult, this, _1)};
+        HttpJob::OnError onError {std::bind(&TstHttp::onError, this, _1)};
 
         m_factory.reset(new HttpRequestFactory(m_network));
         m_pipe.reset(new HttpPipe(*m_factory, std::move(onResult), std::move(onError)));

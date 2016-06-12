@@ -29,196 +29,265 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MODEL_H
-#define MICROCORE_DATA_MODEL_H
+#ifndef MODEL_H
+#define MODEL_H
 
-#include "modeldata.h"
-#include "core/pipe.h"
-#include <set>
+#include "core/globals.h"
+#include "data/imutablemodel.h"
+#include "data/idatastore.h"
+#include <algorithm>
 #include <deque>
+#include <functional>
+#include <memory>
+#include <set>
+#include <QtCore/QtGlobal>
 
 namespace microcore { namespace data {
 
-/**
- * @brief A generic container
- */
-template<class Data, class Store>
-class ModelBase
+template<class V, class M, class S = std::deque<const V *>>
+class Model: public IMutableModel<V, S>, private IDataStore<typename M::KeyType, V>::IListener
 {
 public:
-    using Item_t = Data;
-    using NotificationItem_t = const Data *;
-    using NotificationItems_t = std::vector<NotificationItem_t>;
-    using StoredItem_t = const Data *;
-    using Storage_t = std::deque<StoredItem_t>;
-    using SourceItems_t = std::vector<Item_t>;
-    /**
-     * @brief An interface for a Model listener
-     *
-     * This interface is used to implement models-like classes, that listens to a
-     * Model and want to be notified when the Model changes.
-     *
-     * This listener can be used to get notifications when some items are inserted,
-     * removed, or updated. This is done via onAppend(), onPrepend(), onUpdate() and
-     * onRemove().
-     */
-    class IListener
+    explicit Model(IDataStore<typename M::KeyType, V> &dataStore)
+        : m_dataStore {&dataStore}
     {
-    public:
-         virtual ~IListener() {}
-         /**
-          * @brief Notify that new items are appended
-          * @param items items to be appended.
-          */
-         virtual void onAppend(const NotificationItems_t &items) = 0;
-         /**
-          * @brief Notify that new items are prepended
-          * @param items items to be prepended.
-          */
-         virtual void onPrepend(const NotificationItems_t &items) = 0;
-         /**
-          * @brief Notify that an item is updated
-          * @param index index of the item that is updated.
-          */
-         virtual void onUpdate(std::size_t index, NotificationItem_t item) = 0;
-         /**
-          * @brief Notify that an item is removed
-          * @param index index of the item that is removed.
-          */
-         virtual void onRemove(std::size_t index) = 0;
-         /**
-          * @brief Notify that an item has moved
-          * @param from index of the item to move.
-          * @param to the item's new index.
-          */
-         virtual void onMove(std::size_t from, std::size_t to) = 0;
-         /**
-          * @brief Notify that the listened object is now invalid
-          *
-          * When called on this method, the listener should stop
-          * listening.
-          */
-         virtual void onInvalidation() = 0;
-    };
-    DISABLE_COPY_DEFAULT_MOVE(ModelBase);
-    virtual ~ModelBase()
+        m_dataStore->addListener(*this);
+    }
+    DISABLE_COPY_DEFAULT_MOVE(Model);
+    ~Model()
     {
+        if (m_dataStore) {
+            m_dataStore->removeListener(*this);
+        }
+
         using namespace std::placeholders;
         std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onInvalidation, _1));
+                      std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
     }
-    typename Storage_t::const_iterator begin() const
+    typename S::iterator begin() noexcept override
     {
-        return std::begin(m_data);
+        return m_data.begin();
     }
-    typename Storage_t::const_iterator end() const
+    typename S::iterator end() noexcept override
     {
-        return std::end(m_data);
+        return m_data.end();
     }
-    bool empty() const
+    typename S::const_iterator begin() const noexcept override
+    {
+        return m_data.begin();
+    }
+    typename S::const_iterator end() const noexcept override
+    {
+        return m_data.end();
+    }
+    bool empty() const noexcept override
     {
         return m_data.empty();
     }
-    std::size_t size() const
+    typename S::size_type size() const noexcept override
     {
         return m_data.size();
     }
-    void append(SourceItems_t &&items)
+    virtual const V * operator[](typename S::size_type index) const override
     {
-        using namespace std::placeholders;
-        const NotificationItems_t &stored = m_store.add(std::move(items));
-        m_data.insert(std::end(m_data), std::begin(stored), std::end(stored));
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onAppend, _1, std::ref(stored)));
-    }
-    void prepend(SourceItems_t &&items)
-    {
-        using namespace std::placeholders;
-        const NotificationItems_t &stored = m_store.add(std::move(items));
-        m_data.insert(std::begin(m_data), std::begin(stored), std::end(stored));
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onPrepend, _1, std::ref(stored)));
-    }
-    bool update(std::size_t index, Item_t &&item)
-    {
-        using namespace std::placeholders;
         if (index >= m_data.size()) {
-            return false;
+            return nullptr;
         }
-        if (!m_store.update(m_data.at(index), std::move(item))) {
-            return false;
-        }
-
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onUpdate, _1, index, m_data.at(index)));
-        return true;
+        return m_data[index];
     }
-    bool remove(std::size_t index)
+    void addListener(typename IModel<V, S>::IListener &listener) override
     {
-        using namespace std::placeholders;
-        if (index >= m_data.size()) {
-            return false;
-        }
-        if (!m_store.remove(m_data.at(index))) {
-            return false;
-        }
-        m_data.erase(std::begin(m_data) + index);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onRemove, _1, index));
-        return true;
-    }
-    bool move(std::size_t from, std::size_t to)
-    {
-        using namespace std::placeholders;
-        if (from >= m_data.size() || to > m_data.size()) {
-            return false;
-        }
-
-        if (to == from || to == from + 1) {
-            return false;
-        }
-
-        std::size_t toIndex = (to < from) ? to : to - 1;
-
-        StoredItem_t data {*(std::begin(m_data) + from)};
-        m_data.erase(std::begin(m_data) + from);
-        m_data.insert(std::begin(m_data) + toIndex, data);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onMove, _1, from, to));
-        return true;
-    }
-    void addListener(IListener &listener)
-    {
-        m_listeners.insert(&listener);
-        if (!m_data.empty()) {
-            listener.onAppend(NotificationItems_t(m_data.begin(), m_data.end()));
+        bool inserted {m_listeners.emplace(&listener).second};
+        if (inserted && !m_data.empty()) {
+            listener.onAppend(std::vector<const V *>(std::begin(m_data), std::end(m_data)));
         }
     }
-    void removeListener(IListener &listener)
+    void removeListener(typename IModel<V, S>::IListener &listener) override
     {
         m_listeners.erase(&listener);
     }
-protected:
-    explicit ModelBase(Store &&store)
-        : m_store(std::move(store))
+    void append(std::vector<V> &&values) override
     {
+        insert(std::end(m_data), std::move(values), &IModel<V, S>::IListener::onAppend);
+    }
+    void prepend(std::vector<V> &&values) override
+    {
+        insert(std::begin(m_data), std::move(values), &IModel<V, S>::IListener::onPrepend);
+    }
+    void insert(typename S::size_type index, std::vector<V> &&values) override
+    {
+        if (index > m_data.size()) {
+            return;
+        }
+        using namespace std::placeholders;
+        insert(std::begin(m_data) + index, std::move(values),
+               std::bind(&IModel<V, S>::IListener::onInsert, _1, index, _2));
+    }
+    void remove(typename S::size_type index) override
+    {
+        ListenBlockerLock lock {m_listeningDataStore};
+        if (m_dataStore == nullptr) {
+            return;
+        }
+
+        if (index > m_data.size()) {
+            return;
+        }
+
+        auto it = std::begin(m_data) + index;
+        const V *value {*it};
+        m_data.erase(it);
+        m_dataStore->remove(m_mapper(*value));
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
+    }
+    void update(typename S::size_type index, arg_rvalue_reference<V> value) override
+    {
+        ListenBlockerLock lock {m_listeningDataStore};
+        if (m_dataStore == nullptr) {
+            return;
+        }
+
+        if (index > m_data.size()) {
+            return;
+        }
+
+        const V *storedValue {m_data[index]};
+        const typename M::KeyType &key {m_mapper(*storedValue)};
+        if (key != m_mapper(value)) {
+            return;
+        }
+
+        m_dataStore->update(key, std::move(value));
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*storedValue)));
+    }
+    void move(typename S::size_type oldIndex, typename S::size_type newIndex) override
+    {
+        if (oldIndex >= m_data.size() || newIndex > m_data.size()) {
+            return;
+        }
+
+        if (newIndex == oldIndex || newIndex == oldIndex + 1) {
+            return;
+        }
+
+        typename S::size_type toIndex = (newIndex < oldIndex) ? newIndex : newIndex - 1;
+
+        const V *storedValue {m_data[oldIndex]};
+        m_data.erase(std::begin(m_data) + oldIndex);
+        m_data.insert(std::begin(m_data) + toIndex, storedValue);
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onMove, _1, oldIndex, newIndex));
     }
 private:
-    Store m_store {};
-    Storage_t m_data {};
-    std::set<IListener *> m_listeners {};
-};
-
-template<class Data>
-class Model : public ModelBase<Data, ModelData<Data>>
-{
-public:
-    explicit Model()
-        : ModelBase<Data, ModelData<Data>>(ModelData<Data>())
+    class ListenBlockerLock
     {
+    public:
+        explicit ListenBlockerLock(bool &listeningDataStore)
+            : m_listeningDataStore {listeningDataStore}
+        {
+            m_listeningDataStore = false;
+        }
+        ~ListenBlockerLock()
+        {
+            m_listeningDataStore = true;
+        }
+    private:
+        bool &m_listeningDataStore;
+    };
+
+    void insert(typename S::iterator index, std::vector<V> &&values,
+                std::function<void (typename IModel<V, S>::IListener *, const std::vector<const V *> &)> &&function)
+    {
+        if (m_dataStore == nullptr) {
+            return;
+        }
+
+        std::vector<const V *> buffer {};
+        buffer.reserve(values.size());
+        std::for_each(std::begin(values), std::end(values), [&buffer, this](V &value) {
+            const V *addedValue {m_dataStore->addUnique(m_mapper(value), std::move(value))};
+            if (addedValue != nullptr) {
+                buffer.emplace_back(addedValue);
+            }
+        });
+        m_data.insert(index, std::begin(buffer), std::end(buffer));
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(function, _1, std::ref(buffer)));
     }
+    void onAdd(arg_const_reference<typename M::KeyType> key,
+               arg_const_reference<V> value) override
+    {
+        Q_UNUSED(key)
+        Q_UNUSED(value)
+    }
+    void onRemove(arg_const_reference<typename M::KeyType> key) override
+    {
+        if (!m_listeningDataStore) {
+            return;
+        }
+
+        auto it = std::find_if(std::begin(m_data), std::end(m_data), [&key, this](const V *v) {
+            return m_mapper(*v) == key;
+        });
+
+        if (it == std::end(m_data)) {
+            return;
+        }
+        typename S::size_type index = it - std::begin(m_data);
+        m_data.erase(it);
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
+    }
+    void onUpdate(arg_const_reference<typename M::KeyType> key,
+                  arg_const_reference<V> value) override
+    {
+        Q_UNUSED(value)
+        if (!m_listeningDataStore) {
+            return;
+        }
+
+        auto it = std::find_if(std::begin(m_data), std::end(m_data), [&key, this](const V *v) {
+            return m_mapper(*v) == key;
+        });
+
+        if (it == std::end(m_data)) {
+            return;
+        }
+        typename S::size_type index = it - std::begin(m_data);
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*(*it))));
+    }
+    void onInvalidation() override
+    {
+        m_dataStore = nullptr;
+        m_data.clear();
+
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
+    }
+    IDataStore<typename M::KeyType, V> *m_dataStore {nullptr};
+    M m_mapper {};
+    S m_data {};
+    std::unique_ptr<std::vector<const V *>> m_buffer {};
+    bool m_listeningDataStore {true};
+    std::set<typename IModel<V, S>::IListener *> m_listeners {};
 };
 
 }}
 
-#endif // MICROCORE_DATA_MODEL_H
+#endif // MODEL_H

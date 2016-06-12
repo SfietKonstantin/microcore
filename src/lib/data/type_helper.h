@@ -29,4 +29,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "data/dataoperator.h"
+#ifndef TYPE_HELPER_H
+#define TYPE_HELPER_H
+
+#include <type_traits>
+
+namespace microcore { namespace data {
+
+template<class T>
+using arg_const_reference = typename std::conditional<std::is_arithmetic<T>::value || std::is_pointer<T>::value, T, const T &>::type;
+
+template<class T>
+using arg_rvalue_reference = typename std::conditional<std::is_arithmetic<T>::value || std::is_pointer<T>::value, T, T &&>::type;
+
+}}
+
+#endif // TYPE_HELPER_H

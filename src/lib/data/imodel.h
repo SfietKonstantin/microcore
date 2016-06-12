@@ -29,4 +29,41 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "data/itemmodifier.h"
+#ifndef IMODEL_H
+#define IMODEL_H
+
+#include <vector>
+
+namespace microcore { namespace data {
+
+template<class T, class S>
+class IModel
+{
+public:
+    class IListener
+    {
+    public:
+        virtual ~IListener() {}
+        virtual void onAppend(const std::vector<const T *> &values) = 0;
+        virtual void onPrepend(const std::vector<const T *> &values) = 0;
+        virtual void onInsert(typename S::size_type index, const std::vector<const T *> &values) = 0;
+        virtual void onRemove(typename S::size_type index) = 0;
+        virtual void onUpdate(typename S::size_type index, const T &value) = 0;
+        virtual void onMove(typename S::size_type oldIndex, typename S::size_type newIndex) = 0;
+        virtual void onInvalidation() = 0;
+    };
+    virtual ~IModel() {}
+    virtual typename S::iterator begin() noexcept = 0;
+    virtual typename S::iterator end() noexcept = 0;
+    virtual typename S::const_iterator begin() const noexcept = 0;
+    virtual typename S::const_iterator end() const noexcept = 0;
+    virtual bool empty() const noexcept = 0;
+    virtual typename S::size_type size() const noexcept = 0;
+    virtual const T * operator[](typename S::size_type index) const = 0;
+    virtual void addListener(IListener &listener) = 0;
+    virtual void removeListener(IListener &listener) = 0;
+};
+
+}}
+
+#endif // IMODEL_H

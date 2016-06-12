@@ -29,29 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MOCKMODELAPPENDERLISTENER_H
-#define MICROCORE_DATA_MOCKMODELAPPENDERLISTENER_H
-
-#include <gmock/gmock.h>
-#include "data/modelappender.h"
-
-namespace microcore { namespace data {
-
-template<class Model, class Request, class Error>
-class MockModelAppenderListener: public ModelAppender<Model, Request, Error>::Listener_t
-{
-public:
-    ~MockModelAppenderListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD0_T(onStart, void ());
-    MOCK_METHOD0_T(onFinish, void ());
-    MOCK_METHOD1_T(onError, void (const Error &error));
-    MOCK_METHOD1_T(onInvalidation, void (typename ModelAppender<Model, Request, Error>::Executor_t &source));
-};
-
-}}
-
-#endif // MICROCORE_DATA_MOCKMODELAPPENDERLISTENER_H
+#include "data/type_helper.h"

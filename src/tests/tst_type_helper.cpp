@@ -29,28 +29,57 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_MODELAPPENDER_H
-#define MICROCORE_DATA_MODELAPPENDER_H
+#include <gtest/gtest.h>
+#include "data/type_helper.h"
 
-#include "data/dataoperator.h"
+using namespace microcore::data;
 
-namespace microcore { namespace data {
+namespace {
 
-template<class Model, class Request, class Error>
-class ModelAppender: public DataOperator<Model, Request, typename Model::SourceItems_t, Error>
+class Class {};
+
+}
+
+TEST(KeyReference, Base)
 {
-public:
-    using Result_t = typename Model::SourceItems_t;
-    using Factory_t = ::microcore::core::IJobFactory<Request, Result_t, Error>;
-    ModelAppender(Model &model, std::unique_ptr<Factory_t> factory)
-        : Parent_t(model, std::move(factory), OperatorFunction_t(&Model::append))
     {
+        bool value = std::is_same<arg_const_reference<int>, int>::value;
+        EXPECT_TRUE(value);
     }
-private:
-    using Parent_t = DataOperator<Model, Request, Result_t, Error>;
-    using OperatorFunction_t = std::function<void (Model &, Result_t &&)>;
-};
-
-}}
-
-#endif // MICROCORE_DATA_MODELAPPENDER_H
+    {
+        bool value = std::is_same<arg_const_reference<bool>, bool>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<float>, float>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<double>, double>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<std::string>, const std::string &>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<Class>, const Class &>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<std::string *>, std::string *>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<Class *>, Class *>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<const std::string *>, const std::string *>::value;
+        EXPECT_TRUE(value);
+    }
+    {
+        bool value = std::is_same<arg_const_reference<const Class *>, const Class *>::value;
+        EXPECT_TRUE(value);
+    }
+}

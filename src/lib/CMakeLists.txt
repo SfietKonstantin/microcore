@@ -17,14 +17,14 @@ set(${PROJECT_NAME}_CORE_SRCS
 )
 
 set(${PROJECT_NAME}_DATA_SRCS
-    data/datasource.h
-    data/modeldata.h
-    data/model.h
-    data/datasourcemodel.h
+    data/type_helper.h
+    data/idatastore.h
+    data/iitem.h
     data/item.h
-    data/dataoperator.h
-    data/modelappender.h
-    data/itemmodifier.h
+    data/datastore.h
+    data/imodel.h
+    data/imutablemodel.h
+    data/model.h
 )
 
 set(${PROJECT_NAME}_QT_SRCS

@@ -41,8 +41,8 @@ ViewController::ViewController(QObject *parent)
 ViewController::~ViewController()
 {
     using namespace std::placeholders;
-    using pair_t = std::pair<Executor_t * const, std::unique_ptr<Executor_t>>;
-    std::for_each(std::begin(m_executors), std::end(m_executors), [this](pair_t &pair) {
+    using ExecutorPair = std::pair<Executor_t * const, std::unique_ptr<Executor_t>>;
+    std::for_each(std::begin(m_executors), std::end(m_executors), [this](ExecutorPair &pair) {
         pair.second->removeListener(*this);
     });
 }
