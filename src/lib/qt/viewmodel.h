@@ -40,7 +40,7 @@
 
 namespace microcore { namespace qt {
 
-template<class Type, class Storage, class ObjectType>
+template<class Type, class ObjectType, class Storage = std::deque<const Type *>>
 class ViewModel: public IViewModel, public ::microcore::data::IModel<Type, Storage>::IListener
 {
 public:
