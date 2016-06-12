@@ -29,13 +29,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_CORE_QOBJECTPTR_H
-#define MICROCORE_CORE_QOBJECTPTR_H
+#ifndef MICROCORE_QT_QOBJECTPTR_H
+#define MICROCORE_QT_QOBJECTPTR_H
 
 #include <memory>
 #include <QObject>
 
-namespace microcore {
+namespace microcore { namespace qt {
 
 /**
  * @brief A deleter for QObjects
@@ -56,6 +56,6 @@ public:
 template<class T>
 using QObjectPtr = std::unique_ptr<T, QObjectDeleter<T>>;
 
-}
+}}
 
-#endif // MICROCORE_CORE_QOBJECTPTR_H
+#endif // MICROCORE_QT_QOBJECTPTR_H

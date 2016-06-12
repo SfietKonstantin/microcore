@@ -88,7 +88,7 @@ TEST_F(TstJson, TestSuccess)
     QByteArray data {"{\"hello\": \"world\", \"test\": 123}"};
 
     // Test
-    QObjectPtr<QIODevice> bufferPtr {new QBuffer(&data)};
+    ::microcore::qt::QObjectPtr<QIODevice> bufferPtr {new QBuffer(&data)};
     bufferPtr->open(QIODevice::ReadOnly);
     m_pipe->send(JsonRequest(std::move(bufferPtr)));
     EXPECT_TRUE(called);
@@ -107,7 +107,7 @@ TEST_F(TstJson, TestError)
     QByteArray data {"{"};
 
     // Test
-    QObjectPtr<QIODevice> bufferPtr {new QBuffer(&data)};
+    ::microcore::qt::QObjectPtr<QIODevice> bufferPtr {new QBuffer(&data)};
     bufferPtr->open(QIODevice::ReadOnly);
     m_pipe->send(JsonRequest(std::move(bufferPtr)));
     EXPECT_TRUE(called);

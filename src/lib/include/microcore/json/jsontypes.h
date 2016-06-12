@@ -40,7 +40,7 @@
 
 namespace microcore { namespace json {
 
-using JsonRequest = QObjectPtr<QIODevice>;
+using JsonRequest = ::microcore::qt::QObjectPtr<QIODevice>;
 using JsonResult = QJsonDocument;
 using JsonError = ::microcore::error::Error;
 using JsonJob = ::microcore::core::IJob<JsonResult, JsonError>;
