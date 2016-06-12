@@ -33,7 +33,7 @@
 #define MICROCORE_CORE_MOCKEXECUTORLISTENER_H
 
 #include <gmock/gmock.h>
-#include "core/executor.h"
+#include <microcore/core/executor.h>
 
 namespace microcore { namespace core {
 

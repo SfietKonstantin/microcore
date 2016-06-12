@@ -29,54 +29,55 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_ITEM_H
-#define MICROCORE_DATA_ITEM_H
+#ifndef IDATASTORE_H
+#define IDATASTORE_H
 
-#include "core/globals.h"
-#include "data/iitem.h"
-#include <algorithm>
-#include <functional>
-#include <set>
+#include "type_helper.h"
 
 namespace microcore { namespace data {
 
-template<class T>
-class Item: public IItem<T>
+/**
+ * @brief Interface for a data store
+ *
+ * This interface describes a data store.
+ *
+ * A data store is used to store key-value pairs
+ * and notify that content of the store has changed.
+ *
+ * To add, remove or update the content of the store,
+ * the following methods must be implemented
+ * - add()
+ * - remove()
+ * - update()
+ *
+ * In addition, the data store use listeners to perform
+ * notifications. The following methods must be implemented
+ * to handle them
+ * - addListener()
+ * - removeListener()
+ */
+template<class K, class V>
+class IDataStore
 {
 public:
-    explicit Item() = default;
-    DISABLE_COPY_DEFAULT_MOVE(Item);
-    ~Item()
+    class IListener
     {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IItem<T>::IListener::onInvalidation, _1));
-    }
-    const T & data() const override
-    {
-        return m_data;
-    }
-    void setData(T &&data) override
-    {
-        using namespace std::placeholders;
-        m_data = std::move(data);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IItem<T>::IListener::onUpdate, _1, m_data));
-    }
-    void addListener(typename IItem<T>::IListener &listener) override
-    {
-        m_listeners.insert(&listener);
-        listener.onModified(m_data);
-    }
-    void removeListener(typename IItem<T>::IListener &listener) override
-    {
-        m_listeners.erase(&listener);
-    }
-private:
-    T m_data {};
-    std::set<typename IItem<T>::IListener *> m_listeners {};
+    public:
+        virtual ~IListener() {}
+        virtual void onAdd(arg_const_reference<K> key, arg_const_reference<V> value) = 0;
+        virtual void onRemove(arg_const_reference<K> key) = 0;
+        virtual void onUpdate(arg_const_reference<K> key, arg_const_reference<V> value) = 0;
+        virtual void onInvalidation() = 0;
+    };
+    virtual ~IDataStore() {}
+    virtual const V * addUnique(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual const V & add(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual const V * update(arg_const_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual bool remove(arg_const_reference<K> key) = 0;
+    virtual void addListener(IDataStore<K, V>::IListener &listener) = 0;
+    virtual void removeListener(IDataStore<K, V>::IListener &listener) = 0;
 };
 
 }}
 
-#endif // MICROCORE_DATA_ITEM_H
+#endif // IDATASTORE_H

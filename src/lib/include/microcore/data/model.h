@@ -32,9 +32,9 @@
 #ifndef MODEL_H
 #define MODEL_H
 
-#include "core/globals.h"
-#include "data/imutablemodel.h"
-#include "data/idatastore.h"
+#include "imutablemodel.h"
+#include "idatastore.h"
+#include <microcore/core/globals.h>
 #include <algorithm>
 #include <deque>
 #include <functional>

@@ -34,9 +34,9 @@
 #include <QtTest/QTest>
 #include <QBuffer>
 #include <QJsonObject>
-#include "core/globals.h"
-#include "core/pipe.h"
-#include "json/jsonrequestfactory.h"
+#include <microcore/core/globals.h>
+#include <microcore/core/pipe.h>
+#include <microcore/json/jsonrequestfactory.h>
 #include "mockjob.h"
 
 using namespace ::testing;

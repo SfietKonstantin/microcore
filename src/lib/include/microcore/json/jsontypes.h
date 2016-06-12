@@ -29,20 +29,22 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_HTTP_HTTPTYPES_H
-#define MICROCORE_HTTP_HTTPTYPES_H
+#ifndef MICROCORE_JSON_JSONTYPES_H
+#define MICROCORE_JSON_JSONTYPES_H
 
-#include "core/ijob.h"
-#include "qt/qobjectptr.h"
-#include "error/error.h"
+#include <microcore/core/ijob.h>
+#include <microcore/qt/qobjectptr.h>
+#include <microcore/error/error.h>
 #include <QIODevice>
+#include <QJsonDocument>
 
-namespace microcore { namespace http {
+namespace microcore { namespace json {
 
-using HttpResult = QObjectPtr<QIODevice>;
-using HttpError = ::microcore::error::Error;
-using HttpJob = ::microcore::core::IJob<HttpResult, HttpError>;
+using JsonRequest = QObjectPtr<QIODevice>;
+using JsonResult = QJsonDocument;
+using JsonError = ::microcore::error::Error;
+using JsonJob = ::microcore::core::IJob<JsonResult, JsonError>;
 
 }}
 
-#endif // MICROCORE_HTTP_HTTPTYPES_H
+#endif // MICROCORE_JSON_JSONTYPES_H

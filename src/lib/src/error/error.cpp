@@ -29,36 +29,33 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_HTTP_HTTPREQUEST_H
-#define MICROCORE_HTTP_HTTPREQUEST_H
+#include <microcore/error/error.h>
 
-#include "core/globals.h"
-#include <QNetworkRequest>
+namespace microcore { namespace error {
 
-namespace microcore { namespace http {
-
-class HttpRequest
+Error::Error(std::string id, QString message, QByteArray data)
+    : m_id {std::move(id)}, m_message {std::move(message)}, m_data {std::move(data)}
 {
-public:
-    enum class Type
-    {
-        Invalid,
-        Get,
-        Post,
-        Delete
-    };
-    explicit HttpRequest() = default;
-    HttpRequest(Type type, QNetworkRequest request, QByteArray postData = QByteArray());
-    DEFAULT_COPY_DEFAULT_MOVE(HttpRequest);
-    Type type() const;
-    QNetworkRequest request() const;
-    QByteArray postData() const;
-private:
-    Type m_type {Type::Invalid};
-    QNetworkRequest m_request {};
-    QByteArray m_postData {};
-};
+}
+
+bool Error::empty() const
+{
+    return m_id.empty() && m_message.isEmpty() && m_data.isEmpty();
+}
+
+std::string Error::id() const
+{
+    return m_id;
+}
+
+QString Error::message() const
+{
+    return m_message;
+}
+
+QByteArray Error::data() const
+{
+    return m_data;
+}
 
 }}
-
-#endif // MICROCORE_HTTP_HTTPREQUEST_H

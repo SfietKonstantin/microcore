@@ -9,48 +9,53 @@ find_package(Qt5Core REQUIRED)
 find_package(Qt5Network REQUIRED)
 
 set(${PROJECT_NAME}_CORE_SRCS
-    core/globals.h
-    core/ijob.h
-    core/ijobfactory.h
-    core/pipe.h
-    core/executor.h
+    include/microcore/core/globals.h
+    include/microcore/core/ijob.h
+    include/microcore/core/ijobfactory.h
+    include/microcore/core/pipe.h
+    include/microcore/core/executor.h
 )
 
 set(${PROJECT_NAME}_DATA_SRCS
-    data/type_helper.h
-    data/idatastore.h
-    data/iitem.h
-    data/item.h
-    data/datastore.h
-    data/imodel.h
-    data/imutablemodel.h
-    data/model.h
+    include/microcore/data/type_helper.h
+    include/microcore/data/idatastore.h
+    include/microcore/data/iitem.h
+    include/microcore/data/item.h
+    include/microcore/data/datastore.h
+    include/microcore/data/imodel.h
+    include/microcore/data/imutablemodel.h
+    include/microcore/data/model.h
 )
 
 set(${PROJECT_NAME}_QT_SRCS
-    qt/qobjectptr.h
-    qt/iviewmodel.h
-    qt/viewmodel.h
-    qt/viewcontroller.cpp
-    qt/viewmodelcontroller.h
-    qt/iviewitem.h
-    qt/viewitem.h
-    qt/viewitemcontroller.h
+    include/microcore/qt/qobjectptr.h
+    include/microcore/qt/iviewmodel.h
+    include/microcore/qt/viewmodel.h
+    include/microcore/qt/viewcontroller.h
+    src/qt/viewcontroller.cpp
+    include/microcore/qt/viewmodelcontroller.h
+    include/microcore/qt/iviewitem.h
+    include/microcore/qt/viewitem.h
+    include/microcore/qt/viewitemcontroller.h
 )
 
 set(${PROJECT_NAME}_ERROR_SRCS
-    error/error.cpp
+    include/microcore/error/error.h
+    src/error/error.cpp
 )
 
 set(${PROJECT_NAME}_HTTP_SRCS
-    http/httptypes.h
-    http/httprequest.cpp
-    http/httprequestfactory.cpp
+    include/microcore/http/httptypes.h
+    include/microcore/http/httprequest.h
+    src/http/httprequest.cpp
+    include/microcore/http/httprequestfactory.h
+    src/http/httprequestfactory.cpp
 )
 
 set(${PROJECT_NAME}_JSON_SRCS
-    json/jsontypes.h
-    json/jsonrequestfactory.cpp
+    include/microcore/json/jsontypes.h
+    include/microcore/json/jsonrequestfactory.h
+    src/json/jsonrequestfactory.cpp
 )
 
 add_library(${PROJECT_NAME} STATIC
@@ -69,5 +74,6 @@ target_link_libraries(${PROJECT_NAME}
 )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
+    include
     ${PROJECT_SOURCE_DIR}
 )

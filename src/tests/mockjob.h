@@ -33,7 +33,7 @@
 #define MOCKJOB_H
 
 #include <gmock/gmock.h>
-#include "core/ijob.h"
+#include <microcore/core/ijob.h>
 
 namespace microcore { namespace core {
 

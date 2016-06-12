@@ -34,9 +34,9 @@
 #ifndef MICROCORE_${module.upper()}_${name.upper()}TYPES_H
 #define MICROCORE_${module.upper()}_${name.upper()}TYPES_H
 
-#include <core/ijob.h>
-#include <error/error.h>
-#include <json/jsontypes.h>
+#include <microcore/core/ijob.h>
+#include <microcore/error/error.h>
+#include <microcore/json/jsontypes.h>
 #include "${parent_outfile}.h"
 
 namespace microcore { namespace ${module} {

@@ -32,12 +32,12 @@
 #ifndef MICROCORE_QT_VIEWCONTROLLER_H
 #define MICROCORE_QT_VIEWCONTROLLER_H
 
+#include <microcore/core/globals.h>
 #include <QtCore/QObject>
 #include <QtQml/QQmlParserStatus>
 #include <memory>
-#include "core/globals.h"
-#include "core/executor.h"
-#include "error/error.h"
+#include <microcore/core/executor.h>
+#include <microcore/error/error.h>
 
 namespace microcore { namespace qt {
 

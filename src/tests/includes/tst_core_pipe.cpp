@@ -29,4 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "core/pipe.h"
+#include <microcore/core/pipe.h>

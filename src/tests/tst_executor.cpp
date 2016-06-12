@@ -30,8 +30,8 @@
  */
 
 #include <gtest/gtest.h>
-#include "core/executor.h"
-#include "error/error.h"
+#include <microcore/core/executor.h>
+#include <microcore/error/error.h>
 #include "mockexecutorlistener.h"
 
 using namespace ::testing;

@@ -29,38 +29,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "jsonrequestfactory.h"
+#ifndef MICROCORE_HTTP_HTTPTYPES_H
+#define MICROCORE_HTTP_HTTPTYPES_H
 
-using namespace ::microcore::core;
-using namespace ::microcore::error;
+#include <microcore/core/ijob.h>
+#include <microcore/qt/qobjectptr.h>
+#include <microcore/error/error.h>
+#include <QIODevice>
 
-namespace microcore { namespace json {
+namespace microcore { namespace http {
 
-class JsonRequestJob final : public JsonJob
-{
-public:
-    explicit JsonRequestJob(JsonRequest &&request)
-        : m_request(std::move(request))
-    {
-    }
-    void execute(OnResult &&onResult, OnError &&onError) override
-    {
-        QJsonParseError error {};
-        const QByteArray &data {m_request->readAll()};
-        QJsonDocument document {QJsonDocument::fromJson(data, &error)};
-        if (error.error != QJsonParseError::NoError) {
-            onError(Error("json", error.errorString(), data));
-        } else {
-            onResult(std::move(document));
-        }
-    }
-private:
-    JsonRequest m_request {};
-};
-
-std::unique_ptr<JsonJob> JsonRequestFactory::create(JsonRequest &&request) const
-{
-    return std::unique_ptr<JsonJob>(new JsonRequestJob(std::move(request)));
-}
+using HttpResult = QObjectPtr<QIODevice>;
+using HttpError = ::microcore::error::Error;
+using HttpJob = ::microcore::core::IJob<HttpResult, HttpError>;
 
 }}
+
+#endif // MICROCORE_HTTP_HTTPTYPES_H

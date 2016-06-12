@@ -13,6 +13,7 @@ set(${PROJECT_NAME}_SRCS
     beanobject.cpp.tpl
     beanobject-nested.cpp.tpl
     typesjson.h.tpl
+    typeslistjson.h.tpl
     factory.h.tpl
     factoryjson.cpp.tpl
     factorylistjson.cpp.tpl

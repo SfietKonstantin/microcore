@@ -30,8 +30,8 @@
  */
 
 #include <gtest/gtest.h>
-#include "data/datastore.h"
-#include "data/model.h"
+#include <microcore/data/datastore.h>
+#include <microcore/data/model.h>
 #include "mockmodellistener.h"
 
 using namespace ::testing;

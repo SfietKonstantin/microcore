@@ -29,29 +29,54 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "httprequest.h"
+#ifndef MICROCORE_DATA_ITEM_H
+#define MICROCORE_DATA_ITEM_H
 
-namespace microcore { namespace http {
+#include "iitem.h"
+#include <microcore/core/globals.h>
+#include <algorithm>
+#include <functional>
+#include <set>
 
-HttpRequest::HttpRequest(Type type, QNetworkRequest request, QByteArray postData)
-    : m_type {type}, m_request {std::move(request)}, m_postData {std::move(postData)}
+namespace microcore { namespace data {
+
+template<class T>
+class Item: public IItem<T>
 {
-}
-
-HttpRequest::Type HttpRequest::type() const
-{
-    return m_type;
-}
-
-QNetworkRequest HttpRequest::request() const
-{
-    return m_request;
-}
-
-QByteArray HttpRequest::postData() const
-{
-    return m_postData;
-}
-
+public:
+    explicit Item() = default;
+    DISABLE_COPY_DEFAULT_MOVE(Item);
+    ~Item()
+    {
+        using namespace std::placeholders;
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IItem<T>::IListener::onInvalidation, _1));
+    }
+    const T & data() const override
+    {
+        return m_data;
+    }
+    void setData(T &&data) override
+    {
+        using namespace std::placeholders;
+        m_data = std::move(data);
+        std::for_each(std::begin(m_listeners), std::end(m_listeners),
+                      std::bind(&IItem<T>::IListener::onUpdate, _1, m_data));
+    }
+    void addListener(typename IItem<T>::IListener &listener) override
+    {
+        m_listeners.insert(&listener);
+        listener.onModified(m_data);
+    }
+    void removeListener(typename IItem<T>::IListener &listener) override
+    {
+        m_listeners.erase(&listener);
+    }
+private:
+    T m_data {};
+    std::set<typename IItem<T>::IListener *> m_listeners {};
+};
 
 }}
+
+#endif // MICROCORE_DATA_ITEM_H

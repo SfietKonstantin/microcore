@@ -34,9 +34,9 @@
 #ifndef MICROCORE_${module.upper()}_${name.upper()}REQUESTFACTORY_H
 #define MICROCORE_${module.upper()}_${name.upper()}REQUESTFACTORY_H
 
-#include <core/globals.h>
-#include <core/ijobfactory.h>
-#include <error/error.h>
+#include <microcore/core/globals.h>
+#include <microcore/core/ijobfactory.h>
+#include <microcore/error/error.h>
 #include "${parent_outfile}types.h"
 
 namespace microcore { namespace ${module} {

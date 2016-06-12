@@ -32,8 +32,8 @@
 #ifndef DATASTORE_H
 #define DATASTORE_H
 
-#include "core/globals.h"
-#include "data/idatastore.h"
+#include "idatastore.h"
+#include <microcore/core/globals.h>
 #include <algorithm>
 #include <functional>
 #include <map>

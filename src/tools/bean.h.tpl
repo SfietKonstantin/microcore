@@ -34,7 +34,7 @@
 #ifndef MICROCORE_${module.upper()}_${name.upper()}_H
 #define MICROCORE_${module.upper()}_${name.upper()}_H
 
-#include <core/globals.h>
+#include <microcore/core/globals.h>
 % for include in includes:
 #include <${include}>
 % endfor

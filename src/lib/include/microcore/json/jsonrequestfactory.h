@@ -29,33 +29,23 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "error.h"
+#ifndef MICROCORE_JSON_JSONREQUESTFACTORY_H
+#define MICROCORE_JSON_JSONREQUESTFACTORY_H
 
-namespace microcore { namespace error {
+#include <microcore/core/globals.h>
+#include <microcore/core/ijobfactory.h>
+#include "jsontypes.h"
 
-Error::Error(std::string id, QString message, QByteArray data)
-    : m_id {std::move(id)}, m_message {std::move(message)}, m_data {std::move(data)}
+namespace microcore { namespace json {
+
+class JsonRequestFactory final : public ::microcore::core::IJobFactory<JsonRequest, JsonResult, JsonError>
 {
-}
-
-bool Error::empty() const
-{
-    return m_id.empty() && m_message.isEmpty() && m_data.isEmpty();
-}
-
-std::string Error::id() const
-{
-    return m_id;
-}
-
-QString Error::message() const
-{
-    return m_message;
-}
-
-QByteArray Error::data() const
-{
-    return m_data;
-}
+public:
+    explicit JsonRequestFactory() = default;
+    DISABLE_COPY_DISABLE_MOVE(JsonRequestFactory);
+    std::unique_ptr<JsonJob> create(JsonRequest &&request) const override;
+};
 
 }}
+
+#endif // MICROCORE_JSON_JSONREQUESTFACTORY_H

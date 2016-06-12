@@ -29,26 +29,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef IMUTABLEMODEL_H
-#define IMUTABLEMODEL_H
+#ifndef MICROCORE_QT_IVIEWMODEL_H
+#define MICROCORE_QT_IVIEWMODEL_H
 
-#include "data/imodel.h"
-#include "data/type_helper.h"
+#include <microcore/core/globals.h>
+#include <QtCore/QAbstractListModel>
+#include <QtQml/QQmlParserStatus>
 
-namespace microcore { namespace data {
+namespace microcore { namespace qt {
 
-template<class T, class S>
-class IMutableModel: public IModel<T, S>
+class IViewModel : public QAbstractListModel, public QQmlParserStatus
 {
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
+    Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
+    Q_PROPERTY(int count READ count NOTIFY countChanged)
 public:
-    virtual void append(std::vector<T> &&values) = 0;
-    virtual void prepend(std::vector<T> &&values) = 0;
-    virtual void insert(typename S::size_type index, std::vector<T> &&values) = 0;
-    virtual void remove(typename S::size_type index) = 0;
-    virtual void update(typename S::size_type index, arg_rvalue_reference<T> value) = 0;
-    virtual void move(typename S::size_type oldIndex, typename S::size_type newIndex) = 0;
+    DISABLE_COPY_DISABLE_MOVE(IViewModel);
+    virtual ~IViewModel() {}
+    virtual QObject * controller() const = 0;
+    virtual void setController(QObject *controller) = 0;
+    virtual int count() const = 0;
+Q_SIGNALS:
+    void controllerChanged();
+    void countChanged();
+protected:
+    explicit IViewModel(QObject *parent = nullptr) : QAbstractListModel(parent), QQmlParserStatus() {}
 };
 
 }}
 
-#endif // IMUTABLEMODEL_H
+#endif // MICROCORE_QT_IVIEWMODEL_H

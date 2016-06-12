@@ -29,4 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "data/type_helper.h"
+#include <microcore/data/type_helper.h>

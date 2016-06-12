@@ -29,30 +29,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef ERROR_H
-#define ERROR_H
+#ifndef IMUTABLEMODEL_H
+#define IMUTABLEMODEL_H
 
-#include "core/globals.h"
-#include <QString>
+#include "imodel.h"
+#include "type_helper.h"
 
-namespace microcore { namespace error {
+namespace microcore { namespace data {
 
-class Error
+template<class T, class S>
+class IMutableModel: public IModel<T, S>
 {
 public:
-    explicit Error() = default;
-    Error(std::string id, QString message, QByteArray data = QByteArray());
-    DEFAULT_COPY_DEFAULT_MOVE(Error);
-    bool empty() const;
-    std::string id() const;
-    QString message() const;
-    QByteArray data() const;
-private:
-    std::string m_id {};
-    QString m_message {};
-    QByteArray m_data {};
+    virtual void append(std::vector<T> &&values) = 0;
+    virtual void prepend(std::vector<T> &&values) = 0;
+    virtual void insert(typename S::size_type index, std::vector<T> &&values) = 0;
+    virtual void remove(typename S::size_type index) = 0;
+    virtual void update(typename S::size_type index, arg_rvalue_reference<T> value) = 0;
+    virtual void move(typename S::size_type oldIndex, typename S::size_type newIndex) = 0;
 };
 
 }}
 
-#endif // ERROR_H
+#endif // IMUTABLEMODEL_H

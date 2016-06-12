@@ -31,7 +31,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "data/datastore.h"
+#include <microcore/data/datastore.h>
 #include <QtCore/QtGlobal>
 
 using namespace ::testing;

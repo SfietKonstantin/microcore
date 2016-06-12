@@ -33,9 +33,9 @@
 #include <gmock/gmock.h>
 #include <QtTest/QTest>
 #include <QElapsedTimer>
-#include "core/globals.h"
-#include "core/pipe.h"
-#include "http/httprequestfactory.h"
+#include <microcore/core/globals.h>
+#include <microcore/core/pipe.h>
+#include <microcore/http/httprequestfactory.h>
 #include "mockjob.h"
 
 using namespace ::testing;

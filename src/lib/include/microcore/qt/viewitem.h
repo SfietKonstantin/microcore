@@ -33,9 +33,9 @@
 #define MICROCORE_QT_VIEWITEM_H
 
 #include "iviewitem.h"
-#include "data/iitem.h"
 #include "viewitemcontroller.h"
-#include "qt/qobjectptr.h"
+#include "qobjectptr.h"
+#include <microcore/data/iitem.h>
 
 namespace microcore { namespace qt {
 

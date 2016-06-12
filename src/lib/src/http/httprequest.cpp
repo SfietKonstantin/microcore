@@ -29,31 +29,29 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_IITEM_H
-#define MICROCORE_DATA_IITEM_H
+#include <microcore/http/httprequest.h>
 
-#include "data/type_helper.h"
+namespace microcore { namespace http {
 
-namespace microcore { namespace data {
-
-template<class T>
-class IItem
+HttpRequest::HttpRequest(Type type, QNetworkRequest request, QByteArray postData)
+    : m_type {type}, m_request {std::move(request)}, m_postData {std::move(postData)}
 {
-public:
-    class IListener
-    {
-    public:
-         virtual ~IListener() {}
-         virtual void onUpdate(const T &value) = 0;
-         virtual void onInvalidation() = 0;
-    };
-    virtual ~IItem() {}
-    virtual const T & data() const = 0;
-    virtual void setData(T &&data) = 0;
-    virtual void addListener(IListener &listener) = 0;
-    virtual void removeListener(IListener &listener) = 0;
-};
+}
+
+HttpRequest::Type HttpRequest::type() const
+{
+    return m_type;
+}
+
+QNetworkRequest HttpRequest::request() const
+{
+    return m_request;
+}
+
+QByteArray HttpRequest::postData() const
+{
+    return m_postData;
+}
+
 
 }}
-
-#endif // MICROCORE_DATA_IITEM_H

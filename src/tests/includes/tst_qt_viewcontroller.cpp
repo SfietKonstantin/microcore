@@ -29,4 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "qt/viewcontroller.h"
+#include <microcore/qt/viewcontroller.h>

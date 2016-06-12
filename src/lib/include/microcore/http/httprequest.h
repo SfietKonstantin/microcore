@@ -29,34 +29,36 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_QT_IVIEWITEM_H
-#define MICROCORE_QT_IVIEWITEM_H
+#ifndef MICROCORE_HTTP_HTTPREQUEST_H
+#define MICROCORE_HTTP_HTTPREQUEST_H
 
-#include <QtCore/QAbstractListModel>
-#include <QtQml/QQmlParserStatus>
-#include "core/globals.h"
+#include <microcore/core/globals.h>
+#include <QNetworkRequest>
 
-namespace microcore { namespace qt {
+namespace microcore { namespace http {
 
-class IViewItem : public QObject, public QQmlParserStatus
+class HttpRequest
 {
-    Q_OBJECT
-    Q_INTERFACES(QQmlParserStatus)
-    Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
-    Q_PROPERTY(QObject * item READ item NOTIFY itemChanged)
 public:
-    DISABLE_COPY_DISABLE_MOVE(IViewItem);
-    virtual ~IViewItem() {}
-    virtual QObject * controller() const = 0;
-    virtual QObject * item() const = 0;
-    virtual void setController(QObject *controller) = 0;
-Q_SIGNALS:
-    void controllerChanged();
-    void itemChanged();
-protected:
-    explicit IViewItem(QObject *parent = nullptr) : QObject(parent), QQmlParserStatus() {}
+    enum class Type
+    {
+        Invalid,
+        Get,
+        Post,
+        Delete
+    };
+    explicit HttpRequest() = default;
+    HttpRequest(Type type, QNetworkRequest request, QByteArray postData = QByteArray());
+    DEFAULT_COPY_DEFAULT_MOVE(HttpRequest);
+    Type type() const;
+    QNetworkRequest request() const;
+    QByteArray postData() const;
+private:
+    Type m_type {Type::Invalid};
+    QNetworkRequest m_request {};
+    QByteArray m_postData {};
 };
 
 }}
 
-#endif // MICROCORE_QT_IVIEWITEM_H
+#endif // MICROCORE_HTTP_HTTPREQUEST_H

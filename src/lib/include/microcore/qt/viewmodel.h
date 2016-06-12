@@ -34,8 +34,8 @@
 
 #include "iviewmodel.h"
 #include "viewmodelcontroller.h"
-#include "data/imodel.h"
-#include "qt/qobjectptr.h"
+#include "qobjectptr.h"
+#include <microcore/data/imodel.h>
 #include <deque>
 
 namespace microcore { namespace qt {

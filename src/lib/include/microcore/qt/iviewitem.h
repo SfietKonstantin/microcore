@@ -29,22 +29,34 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_JSON_JSONTYPES_H
-#define MICROCORE_JSON_JSONTYPES_H
+#ifndef MICROCORE_QT_IVIEWITEM_H
+#define MICROCORE_QT_IVIEWITEM_H
 
-#include "core/ijob.h"
-#include "qt/qobjectptr.h"
-#include "error/error.h"
-#include <QIODevice>
-#include <QJsonDocument>
+#include <microcore/core/globals.h>
+#include <QtCore/QAbstractListModel>
+#include <QtQml/QQmlParserStatus>
 
-namespace microcore { namespace json {
+namespace microcore { namespace qt {
 
-using JsonRequest = QObjectPtr<QIODevice>;
-using JsonResult = QJsonDocument;
-using JsonError = ::microcore::error::Error;
-using JsonJob = ::microcore::core::IJob<JsonResult, JsonError>;
+class IViewItem : public QObject, public QQmlParserStatus
+{
+    Q_OBJECT
+    Q_INTERFACES(QQmlParserStatus)
+    Q_PROPERTY(QObject * controller READ controller WRITE setController NOTIFY controllerChanged)
+    Q_PROPERTY(QObject * item READ item NOTIFY itemChanged)
+public:
+    DISABLE_COPY_DISABLE_MOVE(IViewItem);
+    virtual ~IViewItem() {}
+    virtual QObject * controller() const = 0;
+    virtual QObject * item() const = 0;
+    virtual void setController(QObject *controller) = 0;
+Q_SIGNALS:
+    void controllerChanged();
+    void itemChanged();
+protected:
+    explicit IViewItem(QObject *parent = nullptr) : QObject(parent), QQmlParserStatus() {}
+};
 
 }}
 
-#endif // MICROCORE_JSON_JSONTYPES_H
+#endif // MICROCORE_QT_IVIEWITEM_H

@@ -30,7 +30,7 @@
  */
 
 #include <gtest/gtest.h>
-#include "data/type_helper.h"
+#include <microcore/data/type_helper.h>
 
 using namespace microcore::data;
 

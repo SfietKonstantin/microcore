@@ -31,8 +31,8 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include "core/globals.h"
-#include "core/pipe.h"
+#include <microcore/core/globals.h>
+#include <microcore/core/pipe.h>
 #include "mockjob.h"
 #include "mockjobfactory.h"
 

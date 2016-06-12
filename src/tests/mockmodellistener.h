@@ -33,7 +33,7 @@
 #define MICROCORE_DATA_MOCKIMODELLISTENER_H
 
 #include <gmock/gmock.h>
-#include "data/model.h"
+#include <microcore/data/model.h>
 
 namespace microcore { namespace data {
 

@@ -29,7 +29,7 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include "httprequestfactory.h"
+#include <microcore/http/httprequestfactory.h>
 #include <QNetworkReply>
 
 using namespace ::microcore::core;

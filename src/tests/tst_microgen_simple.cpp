@@ -30,10 +30,10 @@
  */
 
 #include <gtest/gtest.h>
-#include "microgen/test.h"
-#include "microgen/testobject.h"
-#include "microgen/testrequestfactory.h"
-#include "microgen/nested_test.h"
+#include <microgen/test.h>
+#include <microgen/testobject.h>
+#include <microgen/testrequestfactory.h>
+#include <microgen/nested_test.h>
 #include <QSignalSpy>
 #include <QJsonObject>
 

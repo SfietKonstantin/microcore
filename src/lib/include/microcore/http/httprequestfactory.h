@@ -32,10 +32,10 @@
 #ifndef MICROCORE_HTTP_HTTPREQUESTFACTORY_H
 #define MICROCORE_HTTP_HTTPREQUESTFACTORY_H
 
-#include "core/globals.h"
-#include "core/ijobfactory.h"
-#include "http/httprequest.h"
-#include "http/httptypes.h"
+#include <microcore/core/globals.h>
+#include <microcore/core/ijobfactory.h>
+#include "httprequest.h"
+#include "httptypes.h"
 #include <QNetworkAccessManager>
 
 namespace microcore { namespace http {
