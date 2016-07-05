@@ -53,25 +53,47 @@ void ${name}Object::update(::microcore::${module}::${nested_name} &&data)
 {
 % if not const:
     ::microcore::${module}::${nested_name} oldData {m_data};
-    m_data = std::move(data);
+    m_data = ::microcore::${module}::${nested_name} {
+        % for i, property in enumerate(properties):
+        % if i != len(properties) - 1:
+        % if property["access"] == "c":
+        m_data.${property["getter"]}(),
+        % else:
+        data.${property["getter"]}(),
+        % endif
+        % else:
+        % if property["access"] == "c":
+        m_data.${property["getter"]}()
+        % else:
+        data.${property["getter"]}()
+        % endif
+        % endif
+        % endfor
+    };
     % for property in properties:
-    % if property["is_qt_object"]:
+    % if property["access"] != "c":
+    % if not property["is_qt_object"]:
+    if (m_data.${property["getter"]}() != oldData.${property["getter"]}()) {
+        Q_EMIT ${property["name"]}Changed();
+    }
+    % else:
     % if property["type_type"] == "list":
     qDeleteAll(m_${property["name"]});
     m_${property["name"]}.clear();
     for (const ${property["nested_type"]} &value : m_data.${property["getter"]}()) {
         m_${property["name"]}.append(new ${property["qt_class"]}(${property["nested_type"]}(value), this));
     }
+    Q_EMIT ${property["name"]}Changed();
     % else:
+    m_${property["name"]}->deleteLater();
+    m_${property["name"]} = new ${property["qt_class"]}(m_data.${property["getter"]}());
+    Q_EMIT ${property["name"]}Changed();
+    % endif
+    % endif
+    % else:
+    % if property["is_qt_object"] and property["type_type"] != "list":
     m_${property["name"]}->update(m_data.${property["getter"]}());
     % endif
-    % endif
-    % endfor
-    % for property in properties:
-    % if property["access"] != "c":
-    if (oldData.${property["getter"]}() != data.${property["getter"]}()) {
-        Q_EMIT ${property["name"]}Changed();
-    }
     % endif
     % endfor
 % else:

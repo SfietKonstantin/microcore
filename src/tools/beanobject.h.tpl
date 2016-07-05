@@ -58,6 +58,8 @@ class ${name}Object : public QObject
     % elif property["access"] == "r" or property["access"] == "rw":
     % if property["type_type"] == "list":
     Q_PROPERTY(QList<${property["qt_type"]}> ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
+    % elif property["is_qt_object"]:
+    Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} CONSTANT)
     % else:
     Q_PROPERTY(${property["qt_type"]} ${property["name"]} READ ${property["getter"]} NOTIFY ${property["name"]}Changed)
     % endif
@@ -80,7 +82,9 @@ public:
 Q_SIGNALS:
     % for property in properties:
     % if property["access"] != "c":
+    % if not property["is_qt_object"] or property["type_type"] == "list":
     void ${property["name"]}Changed();
+    % endif
     % endif
     % endfor
 % endif

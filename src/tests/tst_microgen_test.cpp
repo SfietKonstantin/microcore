@@ -30,14 +30,16 @@
  */
 
 #include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include <microgen/test.h>
 #include <microgen/testobject.h>
 #include <microgen/testrequestfactory.h>
-#include <microgen/nested_test.h>
 #include <QSignalSpy>
 #include <QJsonObject>
 
-TEST(MicroGenSimple, Bean)
+using namespace ::testing;
+
+TEST(MicroGenTest, Bean)
 {
     // Empty constructor
     {
@@ -131,7 +133,7 @@ TEST(MicroGenSimple, Bean)
     }
 }
 
-TEST(MicroGenSimple, BeanQt)
+TEST(MicroGenTest, BeanQt)
 {
     // Empty constructor
     {
@@ -210,19 +212,88 @@ TEST(MicroGenSimple, BeanQt)
     }
 }
 
-TEST(MicroGenSimple, Factory)
+class JobExecutionHandler
 {
+public:
+    void onResult(::microcore::test::Test &&test)
+    {
+        onResultImpl(test);
+    }
+    MOCK_METHOD1(onResultImpl, void (const ::microcore::test::Test &test));
+    void onError(::microcore::error::Error &&error)
+    {
+        onErrorImpl(error);
+    }
+    MOCK_METHOD1(onErrorImpl, void (const ::microcore::error::Error &error));
+};
+
+TEST(MicroGenTest, Factory)
+{
+    using namespace std::placeholders;
+    JobExecutionHandler jobExecutionHandler {};
+    ::microcore::test::Test expected {
+        QLatin1String("constant_value"),
+        QLatin1String("read_only_value"),
+        QLatin1String(),
+        0,
+        0.
+    };
+    EXPECT_CALL(jobExecutionHandler, onResultImpl(_)).Times(0);
+    EXPECT_CALL(jobExecutionHandler, onResultImpl(expected)).Times(1);
+    EXPECT_CALL(jobExecutionHandler, onErrorImpl(_)).Times(0);
+
     ::microcore::test::TestRequestFactory factory {};
     QJsonDocument document {QJsonObject {
         {QLatin1String("constants"), QJsonObject {
             {QLatin1String("constant"), QLatin1String("constant_value")}
         }},
         {QLatin1String("read_only"), QJsonObject {
-            {QLatin1String("name"), QLatin1String("name_value")}
+            {QLatin1String("read_only"), QLatin1String("read_only_value")}
         }}
     }};
 
-    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(::microcore::json::JsonResult())};
+    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(std::move(document))};
     EXPECT_TRUE(job);
+
+    job->execute(std::bind(&JobExecutionHandler::onResult, &jobExecutionHandler, _1),
+                 std::bind(&JobExecutionHandler::onError, &jobExecutionHandler, _1));
+
+}
+
+TEST(MicroGenTest, FactoryFailure1)
+{
+    using namespace std::placeholders;
+    JobExecutionHandler jobExecutionHandler {};
+    EXPECT_CALL(jobExecutionHandler, onResultImpl(_)).Times(0);
+    EXPECT_CALL(jobExecutionHandler, onErrorImpl(_)).Times(1);
+
+    ::microcore::test::TestRequestFactory factory {};
+    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(std::move(QJsonDocument()))};
+    EXPECT_TRUE(job);
+
+    job->execute(std::bind(&JobExecutionHandler::onResult, &jobExecutionHandler, _1),
+                 std::bind(&JobExecutionHandler::onError, &jobExecutionHandler, _1));
+
+}
+
+TEST(MicroGenTest, FactoryFailure2)
+{
+    using namespace std::placeholders;
+    JobExecutionHandler jobExecutionHandler {};
+    EXPECT_CALL(jobExecutionHandler, onResultImpl(_)).Times(0);
+    EXPECT_CALL(jobExecutionHandler, onErrorImpl(_)).Times(1);
+
+    ::microcore::test::TestRequestFactory factory {};
+    QJsonDocument document {QJsonObject {
+        {QLatin1String("constants"), QJsonObject {
+            {QLatin1String("constant"), QLatin1String("constant_value")}
+        }}
+    }};
+
+    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(std::move(document))};
+    EXPECT_TRUE(job);
+
+    job->execute(std::bind(&JobExecutionHandler::onResult, &jobExecutionHandler, _1),
+                 std::bind(&JobExecutionHandler::onError, &jobExecutionHandler, _1));
 
 }

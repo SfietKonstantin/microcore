@@ -122,8 +122,9 @@ void ${name}Object::update(::microcore::${module}::${name} &&data)
     }
     Q_EMIT ${property["name"]}Changed();
     % else:
+    % if property["is_qt_object"]:
     m_${property["name"]}->update(m_data.${property["getter"]}());
-    Q_EMIT ${property["name"]}Changed();
+    % endif
     % endif
     % endif
     % endif

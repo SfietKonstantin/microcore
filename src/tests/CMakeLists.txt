@@ -66,7 +66,8 @@ set(${PROJECT_NAME}_SRCS
     tst_type_helper.cpp
     tst_datastore.cpp
     tst_model.cpp
-    tst_microgen_simple.cpp
+    tst_microgen_test.cpp
+    tst_microgen_objecttest.cpp
 )
 
 add_executable(${PROJECT_NAME}

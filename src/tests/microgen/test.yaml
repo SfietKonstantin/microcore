@@ -10,12 +10,12 @@ properties:
     - name: readOnly
       type: QString
       access: r
-      json_path: read_only/name
+      json_path: read_only/read_only
 
     - name: readWrite
       type: QString
       access: rw
-      json_path: read_only/read_write/description
+      json_path: read_write/read_write
       json_optional: true
 
     - name: integer

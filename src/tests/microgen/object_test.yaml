@@ -2,13 +2,44 @@ module: test
 name: ObjectTest
 source: json
 properties:
-    - name: content
+    - name: readWriteContent
       type: class
-      class_name: Content
-      access: c
-      json_path: constants/content
+      class_name: ReadWriteContent
+      access: rw
+      json_path: read_write/content
       properties:
-          - name: string
+          - name: constant
             type: QString
             access: c
-            json_path: constants/string
+            json_path: constants/constant
+
+          - name: readOnly
+            type: QString
+            access: r
+            json_path: read_only/read_only
+
+          - name: readWrite
+            type: QString
+            access: rw
+            json_path: read_only/read_write
+
+    - name: constantContent
+      type: class
+      class_name: ConstantContent
+      access: c
+      json_path: constant/content
+      properties:
+          - name: constant
+            type: QString
+            access: c
+            json_path: constants/constant
+
+          - name: readOnly
+            type: QString
+            access: r
+            json_path: read_only/read_only
+
+          - name: readWrite
+            type: QString
+            access: rw
+            json_path: read_only/read_write
