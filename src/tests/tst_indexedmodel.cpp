@@ -189,6 +189,7 @@ protected:
         ON_CALL(*m_listener, onMove(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onMove));
         ON_CALL(*m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
         m_model->addListener(m_listener);
+        m_model->addListener(ResultModel::IListener::Ptr());
     }
     std::unique_ptr<ResultDataStore> m_dataStore {};
     std::unique_ptr<ResultModel> m_model {};

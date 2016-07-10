@@ -153,6 +153,7 @@ protected:
         ON_CALL(*m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
         ON_CALL(*m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
         m_dataStore->addListener(m_listener);
+        m_dataStore->addListener(ResultDataStore::IListener::Ptr());
     }
     std::unique_ptr<ResultDataStore> m_dataStore;
     std::shared_ptr<NiceMock<MockIDataStoreListener<int, Result>>> m_listener {};

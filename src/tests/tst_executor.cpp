@@ -137,6 +137,7 @@ TEST_F(TstExecutor, TestStart)
 {
     // Mock
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
 
     // Test
     EXPECT_TRUE(m_executor->testCanStart());
@@ -156,6 +157,7 @@ TEST_F(TstExecutor, TestFinish)
 {
     // Mock
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
 
     // Test
     EXPECT_TRUE(m_executor->testCanStart());
@@ -178,6 +180,7 @@ TEST_F(TstExecutor, TestError)
 {
     // Mock
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
 
     // Test
     EXPECT_TRUE(m_executor->testCanStart());
@@ -205,6 +208,7 @@ TEST_F(TstExecutor, TestListenerDelayAddStart)
 {
     m_executor->testStart();
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
     EXPECT_EQ(m_listenerData.type, ListenerData::Type::Start);
 }
 
@@ -213,6 +217,7 @@ TEST_F(TstExecutor, TestListenerDelayAddError)
     m_executor->testStart();
     m_executor->testError(Error("test", QLatin1String("Error message"), QByteArray("Error data")));
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
     EXPECT_EQ(m_listenerData.type, ListenerData::Type::Error);
     EXPECT_EQ(m_listenerData.error.id(), "test");
     EXPECT_EQ(m_listenerData.error.message(), QLatin1String("Error message"));
@@ -222,6 +227,7 @@ TEST_F(TstExecutor, TestListenerDelayAddError)
 TEST_F(TstExecutor, TestListenerInvalidation)
 {
     m_executor->addListener(m_listener);
+    m_executor->addListener(TestExecutor::IListener::Ptr());
     EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 
     m_executor.reset();
