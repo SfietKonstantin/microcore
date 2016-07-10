@@ -50,7 +50,7 @@ public:
 ${nested_class["c_nested"]}
 % endfor
     explicit ${name}RequestJob(${name}Request &&request)
-        : m_request(std::move(request))
+        : m_request {std::move(request)}
     {
     }
     static QJsonArray getArray(const QJsonObject &root)

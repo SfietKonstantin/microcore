@@ -32,6 +32,7 @@
 #ifndef IMODEL_H
 #define IMODEL_H
 
+#include <memory>
 #include <vector>
 
 namespace microcore { namespace data {
@@ -40,11 +41,10 @@ template<class T, class S>
 class IModel
 {
 public:
-    using Type = T;
-    using StorageType = S;
     class IListener
     {
     public:
+        using Ptr = std::shared_ptr<IListener>;
         virtual ~IListener() {}
         virtual void onAppend(const std::vector<const T *> &values) = 0;
         virtual void onPrepend(const std::vector<const T *> &values) = 0;
@@ -62,8 +62,8 @@ public:
     virtual bool empty() const noexcept = 0;
     virtual typename S::size_type size() const noexcept = 0;
     virtual const T * operator[](typename S::size_type index) const = 0;
-    virtual void addListener(IListener &listener) = 0;
-    virtual void removeListener(IListener &listener) = 0;
+    virtual void addListener(const typename IListener::Ptr &listener) = 0;
+    virtual void removeListener(const typename IListener::Ptr &listener) = 0;
 };
 
 }}

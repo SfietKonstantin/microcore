@@ -41,15 +41,10 @@ template<class Error>
 class MockExecutorListener: public Executor<Error>::IListener
 {
 public:
-    ~MockExecutorListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
     MOCK_METHOD0_T(onStart, void ());
     MOCK_METHOD0_T(onFinish, void ());
     MOCK_METHOD1_T(onError, void (const Error &error));
-    MOCK_METHOD1_T(onInvalidation, void (Executor<Error> &error));
+    MOCK_METHOD0_T(onInvalidation, void ());
 };
 
 }}

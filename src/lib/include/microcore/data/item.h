@@ -32,8 +32,9 @@
 #ifndef MICROCORE_DATA_ITEM_H
 #define MICROCORE_DATA_ITEM_H
 
-#include "iitem.h"
+#include <microcore/data/iitem.h>
 #include <microcore/core/globals.h>
+#include <microcore/core/listenerrepository.h>
 #include <algorithm>
 #include <functional>
 #include <set>
@@ -46,12 +47,6 @@ class Item: public IItem<T>
 public:
     explicit Item() = default;
     DISABLE_COPY_DEFAULT_MOVE(Item);
-    ~Item()
-    {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IItem<T>::IListener::onInvalidation, _1));
-    }
     const T & data() const override
     {
         return m_data;
@@ -60,21 +55,23 @@ public:
     {
         using namespace std::placeholders;
         m_data = std::move(data);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IItem<T>::IListener::onUpdate, _1, m_data));
+        m_listenerRepository.notify(std::bind(&IItem<T>::IListener::onUpdate, _1, m_data));
     }
-    void addListener(typename IItem<T>::IListener &listener) override
+    void addListener(const typename IItem<T>::IListener::Ptr &listener) override final
     {
-        m_listeners.insert(&listener);
-        listener.onModified(m_data);
+        if (!listener) {
+            return;
+        }
+        m_listenerRepository.addListener(listener);
+        listener->onModified(m_data);
     }
-    void removeListener(typename IItem<T>::IListener &listener) override
+    void removeListener(const typename IItem<T>::IListener::Ptr &listener) override final
     {
-        m_listeners.erase(&listener);
+        m_listenerRepository.removeListener(listener);
     }
 private:
     T m_data {};
-    std::set<typename IItem<T>::IListener *> m_listeners {};
+    ::microcore::core::ListenerRepository<typename IItem<T>::IListener> m_listenerRepository {};
 };
 
 }}

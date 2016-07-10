@@ -32,10 +32,9 @@
 #ifndef MICROCORE_CORE_EXECUTOR_H
 #define MICROCORE_CORE_EXECUTOR_H
 
-#include <algorithm>
 #include <functional>
-#include <set>
-#include "globals.h"
+#include <microcore/core/globals.h>
+#include <microcore/core/listenerrepository.h>
 
 namespace microcore { namespace core {
 
@@ -46,32 +45,32 @@ public:
     class IListener
     {
     public:
+        using Ptr = std::shared_ptr<IListener>;
         virtual ~IListener() {}
         virtual void onStart() = 0;
         virtual void onFinish() = 0;
         virtual void onError(const Error &error) = 0;
-        virtual void onInvalidation(Executor<Error> &source) = 0;
+        virtual void onInvalidation() = 0;
     };
     explicit Executor() = default;
     DISABLE_COPY_DEFAULT_MOVE(Executor);
-    virtual ~Executor()
+    virtual ~Executor() {}
+    void addListener(const typename IListener::Ptr &listener)
     {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onInvalidation, _1, std::ref(*this)));
-    }
-    void addListener(IListener &listener)
-    {
-        m_listeners.insert(&listener);
+        if (!listener) {
+            return;
+        }
+
+        m_listenerRepository.addListener(listener);
         if (m_busy) {
-            listener.onStart();
+            listener->onStart();
         } else if (!m_error.empty()) {
-            listener.onError(m_error);
+            listener->onError(m_error);
         }
     }
-    void removeListener(IListener &listener)
+    void removeListener(const typename IListener::Ptr &listener)
     {
-        m_listeners.erase(&listener);
+        m_listenerRepository.removeListener(listener);
     }
     bool busy()
     {
@@ -94,8 +93,7 @@ protected:
         using namespace std::placeholders;
         m_busy = true;
         m_error = Error();
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onStart, _1));
+        m_listenerRepository.notify(std::bind(&IListener::onStart, _1));
     }
     void doError(Error &&error)
     {
@@ -105,8 +103,7 @@ protected:
         }
         m_busy = false;
         m_error = std::move(error);
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onError, _1, std::ref(m_error)));
+        m_listenerRepository.notify(std::bind(&IListener::onError, _1, std::ref(m_error)));
     }
     void doFinish()
     {
@@ -116,11 +113,10 @@ protected:
         }
         m_busy = false;
         m_error = Error();
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IListener::onFinish, _1));
+        m_listenerRepository.notify(std::bind(&IListener::onFinish, _1));
     }
 private:
-    std::set<IListener *> m_listeners {};
+    ListenerRepository<IListener> m_listenerRepository {};
     bool m_busy {false};
     Error m_error {};
 };

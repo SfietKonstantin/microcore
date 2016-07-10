@@ -93,21 +93,18 @@ public:
         type = Type::Error;
         error = std::move(e);
     }
-    void onInvalidation(Executor<Error> &source)
+    void onInvalidation()
     {
         clear();
         type = Type::Invalidation;
-        invalidatedSource = &source;
     }
     void clear()
     {
         type = Type::None;
         error = Error();
-        invalidatedSource = nullptr;
     }
     Type type {Type::None};
     Error error {};
-    Executor<Error> *invalidatedSource {nullptr};
 };
 
 }
@@ -115,25 +112,23 @@ using MockTestExecutorListener = MockExecutorListener<Error>;
 
 class TstExecutor: public Test
 {
+public:
+    explicit TstExecutor()
+        : m_listener {new NiceMock<MockTestExecutorListener>()}
+    {
+    }
 protected:
     void SetUp() override final
     {
         m_executor.reset(new TestExecutor());
-        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstExecutor *>(this), &TstExecutor::invalidateOnDestroyed));
-        ON_CALL(m_listener, onStart()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onStart));
-        ON_CALL(m_listener, onFinish()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onFinish));
-        ON_CALL(m_listener, onError(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onError));
-        ON_CALL(m_listener, onInvalidation(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
+        ON_CALL(*m_listener, onStart()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onStart));
+        ON_CALL(*m_listener, onFinish()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onFinish));
+        ON_CALL(*m_listener, onError(_)).WillByDefault(Invoke(&m_listenerData, &ListenerData::onError));
+        ON_CALL(*m_listener, onInvalidation()).WillByDefault(Invoke(&m_listenerData, &ListenerData::onInvalidation));
 
     }
-    void invalidateOnDestroyed()
-    {
-        if (!m_invalidated) {
-            m_executor->removeListener(m_listener);
-        }
-    }
     std::unique_ptr<TestExecutor> m_executor {};
-    NiceMock<MockTestExecutorListener> m_listener {};
+    std::shared_ptr<NiceMock<MockTestExecutorListener>> m_listener {};
     ListenerData m_listenerData {};
     bool m_invalidated {false};
 };
@@ -229,9 +224,7 @@ TEST_F(TstExecutor, TestListenerInvalidation)
     m_executor->addListener(m_listener);
     EXPECT_EQ(m_listenerData.type, ListenerData::Type::None);
 
-    TestExecutor *oldExecutor = m_executor.get();
     m_executor.reset();
     EXPECT_EQ(m_listenerData.type, ListenerData::Type::Invalidation);
-    EXPECT_EQ(m_listenerData.invalidatedSource, oldExecutor);
     m_invalidated = true;
 }

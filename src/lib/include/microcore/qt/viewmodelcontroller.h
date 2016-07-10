@@ -32,7 +32,7 @@
 #ifndef MICROCORE_QT_VIEWMODELCONTROLLER_H
 #define MICROCORE_QT_VIEWMODELCONTROLLER_H
 
-#include "viewcontroller.h"
+#include <microcore/qt/viewcontroller.h>
 
 namespace microcore { namespace qt {
 

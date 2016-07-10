@@ -32,9 +32,9 @@
 #ifndef MICROCORE_QT_VIEWMODEL_H
 #define MICROCORE_QT_VIEWMODEL_H
 
-#include "iviewmodel.h"
-#include "viewmodelcontroller.h"
-#include "qobjectptr.h"
+#include <microcore/qt/iviewmodel.h>
+#include <microcore/qt/viewmodelcontroller.h>
+#include <microcore/qt/qobjectptr.h>
 #include <microcore/data/imodel.h>
 #include <deque>
 

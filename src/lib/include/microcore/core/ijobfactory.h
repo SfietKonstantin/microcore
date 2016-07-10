@@ -32,7 +32,7 @@
 #ifndef MICROCORE_CORE_IJOBFACTORY_H
 #define MICROCORE_CORE_IJOBFACTORY_H
 
-#include "ijob.h"
+#include <microcore/core/ijob.h>
 
 namespace microcore { namespace core {
 

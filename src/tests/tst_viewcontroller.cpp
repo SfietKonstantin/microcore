@@ -29,4 +29,26 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include <microcore/data/idatastore.h>
+#include <gtest/gtest.h>
+#include <microcore/qt/viewcontroller.h>
+
+using namespace ::testing;
+using namespace ::microcore::qt;
+
+class TstViewController: public Test
+{
+public:
+
+};
+
+TEST_F(TstViewController, AddUnique)
+{
+
+}
+
+class ITest
+{
+public:
+    virtual ~ITest() {}
+    virtual void test() = 0;
+};

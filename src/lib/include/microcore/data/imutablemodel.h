@@ -32,8 +32,8 @@
 #ifndef IMUTABLEMODEL_H
 #define IMUTABLEMODEL_H
 
-#include "imodel.h"
-#include "type_helper.h"
+#include <microcore/data/imodel.h>
+#include <microcore/data/type_helper.h>
 
 namespace microcore { namespace data {
 

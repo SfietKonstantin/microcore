@@ -1,5 +1,7 @@
 project(microcore-tests)
 
+option(ENABLE_NETWORK_TESTS "Enable network tests" OFF)
+
 set(CMAKE_AUTOMOC TRUE)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -35,12 +37,13 @@ set(${PROJECT_NAME}_INCLUDES
     includes/tst_core_globals.cpp
     includes/tst_core_ijob.cpp
     includes/tst_core_ijobfactory.cpp
+    includes/tst_core_listenerrepository.cpp
     includes/tst_core_pipe.cpp
     includes/tst_data_item.cpp
-    includes/tst_data_idatastore.cpp
+    includes/tst_data_iindexeddatastore.cpp
     includes/tst_data_imodel.cpp
     includes/tst_data_imutablemodel.cpp
-    includes/tst_data_model.cpp
+    includes/tst_data_indexedmodel.cpp
     includes/tst_data_type_helper.cpp
     includes/tst_qt_qobjectptr.cpp
     includes/tst_qt_iviewitem.cpp
@@ -59,13 +62,15 @@ set(${PROJECT_NAME}_SRCS
     mockexecutorlistener.h
     mockmodellistener.h
     tst_main.cpp
+    tst_listenerrepository.cpp
     tst_executor.cpp
     tst_pipe.cpp
     tst_http.cpp
     tst_json.cpp
     tst_type_helper.cpp
-    tst_datastore.cpp
-    tst_model.cpp
+    tst_indexeddatastore.cpp
+    tst_indexedmodel.cpp
+    tst_viewcontroller.cpp
     tst_microgen_test.cpp
     tst_microgen_objecttest.cpp
 )
@@ -89,7 +94,7 @@ find_program(NPM_EXEC npm)
 find_program(FOREVER_EXEC forever)
 find_program(COFFEE_EXEC coffee)
 
-if (NPM_EXEC AND FOREVER_EXEC AND COFFEE_EXEC)
+if (ENABLE_NETWORK_TESTS AND NPM_EXEC AND FOREVER_EXEC AND COFFEE_EXEC)
     add_definitions(-DENABLE_MOCK_SERVER)
     set(ENABLE_MOCK_SERVER True)
     set(MOCK_SERVER_DIR ${CMAKE_CURRENT_SOURCE_DIR}/server)
@@ -112,7 +117,7 @@ if (NPM_EXEC AND FOREVER_EXEC AND COFFEE_EXEC)
                       DEPENDS ${MOCK_SERVER_DIR}/app.js
                       COMMENT "Built target mock server generation")
     add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}-mock-server)
-endif(NPM_EXEC AND FOREVER_EXEC AND COFFEE_EXEC)
+endif(ENABLE_NETWORK_TESTS AND NPM_EXEC AND FOREVER_EXEC AND COFFEE_EXEC)
 
 if (LCOV_EXEC)
     message("Building auto lcov cleaning")

@@ -233,7 +233,7 @@ class TestOnlyMovableResultJob final : public IJob<TestOnlyMovable, TestOnlyMova
 {
 public:
     TestOnlyMovableResultJob(TestOnlyMovable &&result)
-        : m_result(std::move(result))
+        : m_result {std::move(result)}
     {
     }
     void execute(OnResult &&onResult, OnError &&) override
@@ -257,7 +257,7 @@ class TestOnlyMovableErrorJob final : public IJob<TestOnlyMovable, TestOnlyMovab
 {
 public:
     TestOnlyMovableErrorJob(TestOnlyMovable &&error)
-        : m_error(std::move(error))
+        : m_error {std::move(error)}
     {
     }
     void execute(OnResult &&, OnError &&onError) override

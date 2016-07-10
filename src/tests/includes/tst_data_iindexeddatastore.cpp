@@ -29,38 +29,4 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#include <microcore/json/jsonrequestfactory.h>
-
-using namespace ::microcore::core;
-using namespace ::microcore::error;
-
-namespace microcore { namespace json {
-
-class JsonRequestJob final : public JsonJob
-{
-public:
-    explicit JsonRequestJob(JsonRequest &&request)
-        : m_request {std::move(request)}
-    {
-    }
-    void execute(OnResult &&onResult, OnError &&onError) override
-    {
-        QJsonParseError error {};
-        const QByteArray &data {m_request->readAll()};
-        QJsonDocument document {QJsonDocument::fromJson(data, &error)};
-        if (error.error != QJsonParseError::NoError) {
-            onError(Error("json", error.errorString(), data));
-        } else {
-            onResult(std::move(document));
-        }
-    }
-private:
-    JsonRequest m_request {};
-};
-
-std::unique_ptr<JsonJob> JsonRequestFactory::create(JsonRequest &&request) const
-{
-    return std::unique_ptr<JsonJob>(new JsonRequestJob(std::move(request)));
-}
-
-}}
+#include <microcore/data/iindexeddatastore.h>

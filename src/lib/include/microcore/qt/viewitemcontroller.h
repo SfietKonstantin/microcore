@@ -32,7 +32,7 @@
 #ifndef MICROCORE_QT_VIEWITEMCONTROLLER_H
 #define MICROCORE_QT_VIEWITEMCONTROLLER_H
 
-#include "viewcontroller.h"
+#include <microcore/qt/viewcontroller.h>
 
 namespace microcore { namespace qt {
 

@@ -34,8 +34,8 @@
 
 #include <microcore/core/globals.h>
 #include <microcore/core/ijobfactory.h>
-#include "httprequest.h"
-#include "httptypes.h"
+#include <microcore/http/httprequest.h>
+#include <microcore/http/httptypes.h>
 #include <QNetworkAccessManager>
 
 namespace microcore { namespace http {

@@ -32,9 +32,9 @@
 #ifndef MICROCORE_QT_VIEWITEM_H
 #define MICROCORE_QT_VIEWITEM_H
 
-#include "iviewitem.h"
-#include "viewitemcontroller.h"
-#include "qobjectptr.h"
+#include <microcore/qt/iviewitem.h>
+#include <microcore/qt/viewitemcontroller.h>
+#include <microcore/qt/qobjectptr.h>
 #include <microcore/data/iitem.h>
 
 namespace microcore { namespace qt {

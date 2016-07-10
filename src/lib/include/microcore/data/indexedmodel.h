@@ -29,12 +29,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MODEL_H
-#define MODEL_H
+#ifndef INDEXEDMODEL_H
+#define INDEXEDMODEL_H
 
-#include "imutablemodel.h"
-#include "idatastore.h"
+#include <microcore/data/imutablemodel.h>
+#include <microcore/data/iindexeddatastore.h>
 #include <microcore/core/globals.h>
+#include <microcore/core/listenerrepository.h>
 #include <algorithm>
 #include <deque>
 #include <functional>
@@ -45,25 +46,15 @@
 namespace microcore { namespace data {
 
 template<class V, class M, class S = std::deque<const V *>>
-class Model: public IMutableModel<V, S>
+class IndexedModel: public IMutableModel<V, S>
 {
 public:
-    explicit Model(IDataStore<typename M::KeyType, V> &dataStore)
-        : m_listener {*this}, m_dataStore {&dataStore}
+    explicit IndexedModel(IIndexedDataStore<typename M::KeyType, V> &dataStore)
+        : m_listener {new DataStoreListener(*this)}, m_dataStore {&dataStore}
     {
         m_dataStore->addListener(m_listener);
     }
-    DISABLE_COPY_DEFAULT_MOVE(Model);
-    ~Model()
-    {
-        if (m_dataStore) {
-            m_dataStore->removeListener(m_listener);
-        }
-
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
-    }
+    DISABLE_COPY_DEFAULT_MOVE(IndexedModel);
     typename S::iterator begin() noexcept override final
     {
         return m_data.begin();
@@ -95,16 +86,20 @@ public:
         }
         return m_data[index];
     }
-    void addListener(typename IModel<V, S>::IListener &listener) override final
+    void addListener(const typename IModel<V, S>::IListener::Ptr &listener) override final
     {
-        bool inserted {m_listeners.emplace(&listener).second};
-        if (inserted && !m_data.empty()) {
-            listener.onAppend(std::vector<const V *>(std::begin(m_data), std::end(m_data)));
+        if (!listener) {
+            return;
+        }
+
+        m_listenerRepository.addListener(listener);
+        if (!m_data.empty()) {
+            listener->onAppend(std::vector<const V *>(std::begin(m_data), std::end(m_data)));
         }
     }
-    void removeListener(typename IModel<V, S>::IListener &listener) override final
+    void removeListener(const typename IModel<V, S>::IListener::Ptr &listener) override final
     {
-        m_listeners.erase(&listener);
+        m_listenerRepository.removeListener(listener);
     }
     void append(std::vector<V> &&values) override final
     {
@@ -140,8 +135,7 @@ public:
         m_dataStore->remove(m_mapper(*value));
 
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
+        m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
     }
     void update(typename S::size_type index, arg_rvalue_reference<V> value) override final
     {
@@ -163,8 +157,7 @@ public:
         m_dataStore->update(key, std::move(value));
 
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*storedValue)));
+        m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*storedValue)));
     }
     void move(typename S::size_type oldIndex, typename S::size_type newIndex) override final
     {
@@ -183,19 +176,19 @@ public:
         m_data.insert(std::begin(m_data) + toIndex, storedValue);
 
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&IModel<V, S>::IListener::onMove, _1, oldIndex, newIndex));
+        m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onMove, _1, oldIndex, newIndex));
     }
 private:
-    class DataStoreListener: public IDataStore<typename M::KeyType, V>::IListener
+    class DataStoreListener: public IIndexedDataStore<typename M::KeyType, V>::IListener
     {
     public:
-        explicit DataStoreListener(Model<V, M, S> &parent)
+        using ValuePtr = std::shared_ptr<V>;
+        explicit DataStoreListener(IndexedModel<V, M, S> &parent)
             : m_parent {parent}
         {
         }
         void onAdd(arg_const_reference<typename M::KeyType> key,
-                   arg_const_reference<V> value) override final
+                   const ValuePtr &value) override final
         {
             Q_UNUSED(key)
             Q_UNUSED(value)
@@ -217,11 +210,10 @@ private:
             m_parent.m_data.erase(it);
 
             using namespace std::placeholders;
-            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
-                          std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
+            m_parent.m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onRemove, _1, index));
         }
         void onUpdate(arg_const_reference<typename M::KeyType> key,
-                      arg_const_reference<V> value) override final
+                      const ValuePtr & value) override final
         {
             Q_UNUSED(value)
             if (!m_parent.m_listeningDataStore) {
@@ -238,8 +230,7 @@ private:
             typename S::size_type index = it - std::begin(m_parent.m_data);
 
             using namespace std::placeholders;
-            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
-                          std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*(*it))));
+            m_parent.m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onUpdate, _1, index, std::ref(*(*it))));
         }
         void onInvalidation() override final
         {
@@ -247,11 +238,10 @@ private:
             m_parent.m_data.clear();
 
             using namespace std::placeholders;
-            std::for_each(std::begin(m_parent.m_listeners), std::end(m_parent.m_listeners),
-                          std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
+            m_parent.m_listenerRepository.notify(std::bind(&IModel<V, S>::IListener::onInvalidation, _1));
         }
     private:
-        Model<V, M, S> &m_parent;
+        IndexedModel<V, M, S> &m_parent;
     };
     class ListenBlockerLock
     {
@@ -269,7 +259,7 @@ private:
         bool &m_listeningDataStore;
     };
     void insert(typename S::iterator index, std::vector<V> &&values,
-                std::function<void (typename IModel<V, S>::IListener *, const std::vector<const V *> &)> &&function)
+                std::function<void (typename IModel<V, S>::IListener &, const std::vector<const V *> &)> &&function)
     {
         if (m_dataStore == nullptr) {
             return;
@@ -278,26 +268,25 @@ private:
         std::vector<const V *> buffer {};
         buffer.reserve(values.size());
         std::for_each(std::begin(values), std::end(values), [&buffer, this](V &value) {
-            const V *addedValue {m_dataStore->addUnique(m_mapper(value), std::move(value))};
-            if (addedValue != nullptr) {
-                buffer.emplace_back(addedValue);
+            const std::shared_ptr<V> &addedValue {m_dataStore->addUnique(m_mapper(value), std::move(value))};
+            if (addedValue) {
+                buffer.emplace_back(addedValue.get());
             }
         });
         m_data.insert(index, std::begin(buffer), std::end(buffer));
 
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(function, _1, std::ref(buffer)));
+        m_listenerRepository.notify(std::bind(function, _1, std::ref(buffer)));
     }
-    DataStoreListener m_listener;
-    IDataStore<typename M::KeyType, V> *m_dataStore {nullptr};
+    typename DataStoreListener::Ptr m_listener;
+    IIndexedDataStore<typename M::KeyType, V> *m_dataStore {nullptr};
     M m_mapper {};
     S m_data {};
     std::unique_ptr<std::vector<const V *>> m_buffer {};
     bool m_listeningDataStore {true};
-    std::set<typename IModel<V, S>::IListener *> m_listeners {};
+    ::microcore::core::ListenerRepository<typename IModel<V, S>::IListener> m_listenerRepository {};
 };
 
 }}
 
-#endif // MODEL_H
+#endif // INDEXEDMODEL_H

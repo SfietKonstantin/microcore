@@ -31,7 +31,7 @@
 
 #include <gtest/gtest.h>
 #include <gmock/gmock.h>
-#include <microcore/data/datastore.h>
+#include <microcore/data/indexeddatastore.h>
 #include <QtCore/QtGlobal>
 
 using namespace ::testing;
@@ -42,17 +42,18 @@ namespace {
 class Result
 {
 public:
+    using ConstPtr = std::shared_ptr<const Result>;
     explicit Result() = default;
     explicit Result(int v) : value {v} {}
     DISABLE_COPY_DEFAULT_MOVE(Result);
     int value {0};
 };
 
-class ResultDataStore: public DataStore<int, Result>
+class ResultDataStore: public IndexedDataStore<int, Result>
 {
 public:
     explicit ResultDataStore() = default;
-    const std::map<int, Result> & internalStorage() const
+    const std::map<int, std::shared_ptr<Result>> & internalStorage() const
     {
         return m_data;
     }
@@ -78,13 +79,13 @@ public:
         : type(t), key(k)
     {
     }
-    explicit ListenerData(Type t, int k, const Result &v)
-        : type(t), key(k), value(&v)
+    explicit ListenerData(Type t, int k, const Result::ConstPtr &v)
+        : type(t), key(k), value(v)
     {
     }
     Type type {Type::None};
     int key {-1};
-    const Result *value {nullptr};
+    Result::ConstPtr value {};
 };
 
 class ListenerWatcher
@@ -103,7 +104,7 @@ public:
     {
         m_data.clear();
     }
-    void onAdd(int key, const Result &value)
+    void onAdd(int key, const Result::ConstPtr &value)
     {
         m_data.emplace_back(ListenerData::Type::Add, key, value);
     }
@@ -111,7 +112,7 @@ public:
     {
         m_data.emplace_back(ListenerData::Type::Remove, key);
     }
-    void onUpdate(int key, const Result &value)
+    void onUpdate(int key, const Result::ConstPtr &value)
     {
         m_data.emplace_back(ListenerData::Type::Update, key, value);
     }
@@ -124,17 +125,13 @@ private:
 };
 
 template<class K, class V>
-class MockIDataStoreListener: public IDataStore<K, V>::IListener
+class MockIDataStoreListener: public IIndexedDataStore<K, V>::IListener
 {
 public:
-    ~MockIDataStoreListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
-    MOCK_METHOD2_T(onAdd, void (arg_const_reference<K> key, arg_const_reference<V> value));
+    using ValuePtr = std::shared_ptr<V>;
+    MOCK_METHOD2_T(onAdd, void (arg_const_reference<K> key, const ValuePtr &value));
     MOCK_METHOD1_T(onRemove, void (arg_const_reference<K> key));
-    MOCK_METHOD2_T(onUpdate, void (arg_const_reference<K> key, arg_const_reference<V> value));
+    MOCK_METHOD2_T(onUpdate, void (arg_const_reference<K> key, const ValuePtr &value));
     MOCK_METHOD0_T(onInvalidation, void ());
 };
 
@@ -142,32 +139,30 @@ public:
 
 class TstDataStore: public Test
 {
+public:
+    explicit TstDataStore()
+        : m_listener {new NiceMock<MockIDataStoreListener<int, Result>>()}
+    {
+    }
 protected:
     void SetUp()
     {
         m_dataStore.reset(new ResultDataStore());
-        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstDataStore *>(this), &TstDataStore::invalidateOnDestroyed));
-        ON_CALL(m_listener, onAdd(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onAdd));
-        ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onRemove));
-        ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
-        ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
+        ON_CALL(*m_listener, onAdd(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onAdd));
+        ON_CALL(*m_listener, onRemove(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onRemove));
+        ON_CALL(*m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
+        ON_CALL(*m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
         m_dataStore->addListener(m_listener);
     }
-    void invalidateOnDestroyed()
-    {
-        if (!m_invalidated) {
-            m_dataStore->removeListener(m_listener);
-        }
-    }
     std::unique_ptr<ResultDataStore> m_dataStore;
-    NiceMock<MockIDataStoreListener<int, Result>> m_listener {};
+    std::shared_ptr<NiceMock<MockIDataStoreListener<int, Result>>> m_listener {};
     ListenerWatcher m_watcher {};
     bool m_invalidated {false};
 };
 
 TEST_F(TstDataStore, AddUnique)
 {
-    const Result *result1 {m_dataStore->addUnique(1, Result(1))};
+    const Result::ConstPtr &result1 {m_dataStore->addUnique(1, Result(1))};
     {
         EXPECT_NE(result1, nullptr);
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
@@ -175,11 +170,11 @@ TEST_F(TstDataStore, AddUnique)
         EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[0].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), result1);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
-    const Result *result2 {m_dataStore->addUnique(2, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->addUnique(2, Result(2))};
     {
         EXPECT_NE(result2, nullptr);
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(2));
@@ -187,15 +182,15 @@ TEST_F(TstDataStore, AddUnique)
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[1].key, 2);
         EXPECT_FALSE(m_dataStore->internalStorage().find(2) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(2)->second), m_watcher[1].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(2)->second), result2);
-        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second.value, 2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second, m_watcher[1].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second, result2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second->value, 2);
     }
 }
 
 TEST_F(TstDataStore, AddUniqueExisting)
 {
-    const Result *result1 {m_dataStore->addUnique(1, Result(1))};
+    const Result::ConstPtr &result1 {m_dataStore->addUnique(1, Result(1))};
     {
         EXPECT_NE(result1, nullptr);
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
@@ -203,76 +198,76 @@ TEST_F(TstDataStore, AddUniqueExisting)
         EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[0].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
-    const Result *result2 {m_dataStore->addUnique(1, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->addUnique(1, Result(2))};
     {
         EXPECT_EQ(result2, nullptr);
         EXPECT_EQ(m_watcher.count(), 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
 }
 
 TEST_F(TstDataStore, Add)
 {
-    const Result &result1 {m_dataStore->add(1, Result(1))};
+    const Result::ConstPtr &result1 {m_dataStore->add(1, Result(1))};
     {
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
         EXPECT_EQ(m_watcher.count(), 1);
         EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[0].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), &result1);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
-    const Result &result2 {m_dataStore->add(2, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->add(2, Result(2))};
     {
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(2));
         EXPECT_EQ(m_watcher.count(), 2);
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[1].key, 2);
         EXPECT_FALSE(m_dataStore->internalStorage().find(2) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(2)->second), m_watcher[1].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(2)->second), &result2);
-        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second.value, 2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second, m_watcher[1].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second, result2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(2)->second->value, 2);
     }
 }
 
 TEST_F(TstDataStore, AddAsUpdate)
 {
-    const Result &result1 {m_dataStore->add(1, Result(1))};
+    const Result::ConstPtr &result1 {m_dataStore->add(1, Result(1))};
     {
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
         EXPECT_EQ(m_watcher.count(), 1);
         EXPECT_EQ(m_watcher[0].type, ListenerData::Type::Add);
         EXPECT_EQ(m_watcher[0].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), &result1);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
-    const Result &result2 {m_dataStore->add(1, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->add(1, Result(2))};
     {
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
         EXPECT_EQ(m_watcher.count(), 2);
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
         EXPECT_EQ(m_watcher[1].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[1].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), &result1);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), &result2);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[1].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 2);
     }
 }
 
 TEST_F(TstDataStore, Update)
 {
     m_dataStore->add(1, Result(1));
-    const Result *result2 {m_dataStore->update(1, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->update(1, Result(2))};
     {
         EXPECT_NE(result2, nullptr);
         EXPECT_EQ(m_dataStore->internalStorage().size(), static_cast<std::size_t>(1));
@@ -280,22 +275,22 @@ TEST_F(TstDataStore, Update)
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
         EXPECT_EQ(m_watcher[1].key, 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[0].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), m_watcher[1].value);
-        EXPECT_EQ(&(m_dataStore->internalStorage().find(1)->second), result2);
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[0].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, m_watcher[1].value);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second, result2);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 2);
     }
 }
 
 TEST_F(TstDataStore, UpdateInexisting)
 {
     m_dataStore->add(1, Result(1));
-    const Result *result2 {m_dataStore->update(2, Result(2))};
+    const Result::ConstPtr &result2 {m_dataStore->update(2, Result(2))};
     {
         EXPECT_EQ(result2, nullptr);
         EXPECT_EQ(m_watcher.count(), 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
 }
 
@@ -318,7 +313,7 @@ TEST_F(TstDataStore, RemoveInexisting)
     {
         EXPECT_EQ(m_watcher.count(), 1);
         EXPECT_FALSE(m_dataStore->internalStorage().find(1) == std::end(m_dataStore->internalStorage()));
-        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second.value, 1);
+        EXPECT_EQ(m_dataStore->internalStorage().find(1)->second->value, 1);
     }
 }
 

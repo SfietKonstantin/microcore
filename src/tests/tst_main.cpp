@@ -38,7 +38,7 @@ class WrapperObject final : public QObject
 {
 public:
     explicit WrapperObject(int &argc, char **argv)
-        : m_argc(argc), m_argv(argv)
+        : m_argc {argc}, m_argv {argv}
     {
     }
     void run()

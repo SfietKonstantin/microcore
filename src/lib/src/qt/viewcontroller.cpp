@@ -34,17 +34,8 @@
 namespace microcore { namespace qt {
 
 ViewController::ViewController(QObject *parent)
-    : QObject(parent), QQmlParserStatus()
+    : QObject(parent), QQmlParserStatus(), m_listener {new ExecutorListener(*this)}
 {
-}
-
-ViewController::~ViewController()
-{
-    using namespace std::placeholders;
-    using ExecutorPair = std::pair<Executor_t * const, std::unique_ptr<Executor_t>>;
-    std::for_each(std::begin(m_executors), std::end(m_executors), [this](ExecutorPair &pair) {
-        pair.second->removeListener(*this);
-    });
 }
 
 void ViewController::classBegin()
@@ -65,13 +56,13 @@ QString ViewController::errorMessage() const
     return m_errorMessage;
 }
 
-ViewController::Executor_t & ViewController::addExecutor(std::unique_ptr<Executor_t> executor)
+ViewController::ExecutorType & ViewController::addExecutor(std::shared_ptr<ExecutorType> executor)
 {
-    auto result = m_executors.emplace(executor.get(), std::move(executor));
+    Q_ASSERT(executor);
+    auto result = m_executors.insert(executor);
     Q_ASSERT(result.second); // Should be added
-    ViewController::Executor_t &returned {*(result.first->second)};
-    returned.addListener(*this);
-    return returned;
+    executor->addListener(m_listener);
+    return *executor;
 }
 
 void ViewController::setStatus(ViewController::Status status)
@@ -83,7 +74,7 @@ void ViewController::setStatus(ViewController::Status status)
 }
 
 ViewController::ExecutorListener::ExecutorListener(ViewController &parent)
-    : m_parent(parent)
+    : m_parent {parent}
 {
 }
 
@@ -100,7 +91,7 @@ void ViewController::ExecutorListener::onFinish()
     Q_EMIT m_parent.finished();
 }
 
-void ViewController::ExecutorListener::onError(const ViewController::Error_t &errorValue)
+void ViewController::ExecutorListener::onError(const ViewController::ErrorType &errorValue)
 {
     Q_ASSERT(m_parent.m_status == Busy);
     m_parent.setStatus(Error);
@@ -111,9 +102,8 @@ void ViewController::ExecutorListener::onError(const ViewController::Error_t &er
     Q_EMIT m_parent.error();
 }
 
-void ViewController::ExecutorListener::onInvalidation(ViewController::Executor_t &source)
+void ViewController::ExecutorListener::onInvalidation()
 {
-    m_parent.m_executors.erase(&source);
 }
 
 }}

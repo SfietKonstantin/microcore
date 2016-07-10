@@ -33,7 +33,7 @@
 #define MICROCORE_DATA_MOCKIMODELLISTENER_H
 
 #include <gmock/gmock.h>
-#include <microcore/data/model.h>
+#include <microcore/data/imodel.h>
 
 namespace microcore { namespace data {
 
@@ -41,11 +41,6 @@ template<class V>
 class MockModelListener: public IModel<V, std::deque<const V *>>::IListener
 {
 public:
-    ~MockModelListener()
-    {
-        onDestroyed();
-    }
-    MOCK_METHOD0_T(onDestroyed, void ());
     MOCK_METHOD1_T(onAppend, void (const std::vector<const V *> &values));
     MOCK_METHOD1_T(onPrepend, void (const std::vector<const V *> &values));
     MOCK_METHOD2_T(onInsert, void (std::size_t index, const std::vector<const V *> &values));

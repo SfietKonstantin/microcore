@@ -35,15 +35,14 @@
 #include <microcore/core/globals.h>
 #include <QtCore/QObject>
 #include <QtQml/QQmlParserStatus>
-#include <memory>
 #include <microcore/core/executor.h>
 #include <microcore/error/error.h>
+#include <set>
 
 namespace microcore { namespace qt {
 
 class ViewController
         : public QObject, public QQmlParserStatus
-        , private ::microcore::core::Executor< ::microcore::error::Error>::IListener
 {
     Q_OBJECT
     Q_INTERFACES(QQmlParserStatus)
@@ -58,7 +57,6 @@ public:
         Error
     };
     DISABLE_COPY_DISABLE_MOVE(ViewController);
-    ~ViewController();
     void classBegin() override;
     void componentComplete() override;
     Status status() const;
@@ -69,10 +67,10 @@ Q_SIGNALS:
     void finished();
     void error();
 protected:
-    using Error_t = ::microcore::error::Error;
-    using Executor_t = ::microcore::core::Executor< ::microcore::error::Error>;
+    using ErrorType = ::microcore::error::Error;
+    using ExecutorType = ::microcore::core::Executor< ::microcore::error::Error>;
     explicit ViewController(QObject *parent = nullptr);
-    Executor_t & addExecutor(std::unique_ptr<Executor_t> executor);
+    ExecutorType & addExecutor(std::shared_ptr<ExecutorType> executor);
     template<class Executor, class Request>
     bool start(Executor &executor, Request &&request)
     {
@@ -91,18 +89,20 @@ private:
     class ExecutorListener: public ::microcore::core::Executor< ::microcore::error::Error>::IListener
     {
     public:
+        using Ptr = std::shared_ptr<ExecutorListener>;
         explicit ExecutorListener(ViewController &parent);
         void onStart() override final;
         void onFinish() override final;
-        void onError(const Error_t &errorValue) override final;
-        void onInvalidation(Executor_t &source) override final;
+        void onError(const ErrorType &errorValue) override final;
+        void onInvalidation() override final;
     private:
         ViewController &m_parent;
     };
     void setStatus(Status status);
     Status m_status {Idle};
     QString m_errorMessage {};
-    std::map<Executor_t *, std::unique_ptr<Executor_t>> m_executors {};
+    std::set<std::shared_ptr<ExecutorType>> m_executors {};
+    ExecutorListener::Ptr m_listener {};
 };
 
 }}

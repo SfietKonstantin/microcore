@@ -34,7 +34,7 @@
 
 #include <microcore/core/globals.h>
 #include <microcore/core/ijobfactory.h>
-#include "jsontypes.h"
+#include <microcore/json/jsontypes.h>
 
 namespace microcore { namespace json {
 

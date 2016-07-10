@@ -14,17 +14,18 @@ set(${PROJECT_NAME}_CORE_SRCS
     include/microcore/core/ijobfactory.h
     include/microcore/core/pipe.h
     include/microcore/core/executor.h
+    include/microcore/core/listenerrepository.h
 )
 
 set(${PROJECT_NAME}_DATA_SRCS
     include/microcore/data/type_helper.h
-    include/microcore/data/idatastore.h
+    include/microcore/data/iindexeddatastore.h
     include/microcore/data/iitem.h
     include/microcore/data/item.h
-    include/microcore/data/datastore.h
+    include/microcore/data/indexeddatastore.h
     include/microcore/data/imodel.h
     include/microcore/data/imutablemodel.h
-    include/microcore/data/model.h
+    include/microcore/data/indexedmodel.h
 )
 
 set(${PROJECT_NAME}_QT_SRCS

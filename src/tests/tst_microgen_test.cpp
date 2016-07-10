@@ -268,7 +268,7 @@ TEST(MicroGenTest, FactoryFailure1)
     EXPECT_CALL(jobExecutionHandler, onErrorImpl(_)).Times(1);
 
     ::microcore::test::TestRequestFactory factory {};
-    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(std::move(QJsonDocument()))};
+    std::unique_ptr< ::microcore::test::TestJob> job {factory.create(QJsonDocument())};
     EXPECT_TRUE(job);
 
     job->execute(std::bind(&JobExecutionHandler::onResult, &jobExecutionHandler, _1),

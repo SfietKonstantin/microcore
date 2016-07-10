@@ -1,7 +1,7 @@
 #ifndef MICROCORE_CORE_PIPE_H
 #define MICROCORE_CORE_PIPE_H
 
-#include "ijobfactory.h"
+#include <microcore/core/ijobfactory.h>
 #include <map>
 #include <QtGlobal>
 

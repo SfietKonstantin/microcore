@@ -29,11 +29,12 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef DATASTORE_H
-#define DATASTORE_H
+#ifndef INDEXEDDATASTORE_H
+#define INDEXEDDATASTORE_H
 
-#include "idatastore.h"
+#include <microcore/data/iindexeddatastore.h>
 #include <microcore/core/globals.h>
+#include <microcore/core/listenerrepository.h>
 #include <algorithm>
 #include <functional>
 #include <map>
@@ -43,87 +44,85 @@
 namespace microcore { namespace data {
 
 template<class K, class V>
-class DataStore: public IDataStore<K, V>
+class IndexedDataStore: public IIndexedDataStore<K, V>
 {
 public:
-    explicit DataStore() = default;
-    DISABLE_COPY_DEFAULT_MOVE(DataStore);
-    ~DataStore()
-    {
-        using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&DataStore::IListener::onInvalidation, _1));
-    }
-    const V * addUnique(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) override
+    using ValuePtr = std::shared_ptr<V>;
+    explicit IndexedDataStore() = default;
+    DISABLE_COPY_DEFAULT_MOVE(IndexedDataStore);
+    ValuePtr addUnique(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) override final
     {
         auto it = m_data.find(key);
         if (it != std::end(m_data)) {
-            return nullptr;
+            return ValuePtr();
         }
-        it = m_data.emplace(std::move(key), std::move(value)).first;
+        it = m_data.emplace(std::move(key), ValuePtr(new V(std::move(value)))).first;
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&DataStore::IListener::onAdd, _1, std::ref(it->first), std::ref(it->second)));
-        return &(it->second);
+        m_listenerRepository.notify(std::bind(&IndexedDataStore::IListener::onAdd, _1,
+                                              std::ref(it->first), std::ref(it->second)));
+        return it->second;
     }
-    const V & add(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) override
+    ValuePtr add(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) override final
     {
         auto it = m_data.find(key);
         if (it != std::end(m_data)) {
             update(it, std::move(value));
             return it->second;
         }
-        it = m_data.emplace(std::move(key), std::move(value)).first;
+        it = m_data.emplace(std::move(key), ValuePtr(new V(std::move(value)))).first;
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&DataStore::IListener::onAdd, _1, std::ref(it->first), std::ref(it->second)));
+        m_listenerRepository.notify(std::bind(&IndexedDataStore::IListener::onAdd, _1,
+                                              std::ref(it->first), std::ref(it->second)));
         return it->second;
     }
-    const V * update(arg_const_reference<K> key, arg_rvalue_reference<V> value) override
+    ValuePtr update(arg_const_reference<K> key, arg_rvalue_reference<V> value) override final
     {
         auto it = m_data.find(key);
         if (it == std::end(m_data)) {
             return nullptr;
         }
         update(it, std::move(value));
-        return &(it->second);
+        return it->second;
     }
-    bool remove(arg_const_reference<K> key) override
+    bool remove(arg_const_reference<K> key) override final
     {
         auto it = m_data.find(key);
         if (it == std::end(m_data)) {
             return false;
         }
-        m_data.erase(it);
-
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&DataStore::IListener::onRemove, _1, std::ref(key)));
+        m_listenerRepository.notify(std::bind(&IndexedDataStore::IListener::onRemove, _1, std::ref(key)));
+
+        m_data.erase(it);
         return true;
     }
 
-    void addListener(typename DataStore::IListener &listener) override
+    void addListener(const typename IndexedDataStore::IListener::Ptr &listener) override final
     {
-        m_listeners.insert(&listener);
+        if (!listener) {
+            return;
+        }
+
+        m_listenerRepository.addListener(listener);
     }
-    void removeListener(typename DataStore::IListener &listener) override
+    void removeListener(const typename IndexedDataStore::IListener::Ptr &listener) override final
     {
-        m_listeners.erase(&listener);
+        m_listenerRepository.removeListener(listener);
     }
 protected:
-    void update(typename std::map<K, V>::iterator &it, arg_rvalue_reference<V> value)
+    std::map<K, ValuePtr> m_data {};
+private:
+    void update(typename std::map<K, ValuePtr>::iterator &it, arg_rvalue_reference<V> value)
     {
-        it->second = std::move(value);
+        *(it->second) = std::move(value);
 
         using namespace std::placeholders;
-        std::for_each(std::begin(m_listeners), std::end(m_listeners),
-                      std::bind(&DataStore::IListener::onUpdate, _1, std::ref(it->first), std::ref(it->second)));
+        m_listenerRepository.notify(std::bind(&IndexedDataStore::IListener::onUpdate, _1,
+                                              std::ref(it->first), std::ref(it->second)));
     }
-
-    std::map<K, V> m_data {};
-    std::set<typename DataStore::IListener *> m_listeners {};
+    ::microcore::core::ListenerRepository<typename IndexedDataStore::IListener> m_listenerRepository {};
 };
 
 }}
 
-#endif // DATASTORE_H
+#endif // INDEXEDDATASTORE_H

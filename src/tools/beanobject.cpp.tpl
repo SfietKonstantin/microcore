@@ -51,7 +51,7 @@ ${name}Object::${name}Object(QObject *parent)
 }
 
 ${name}Object::${name}Object(::microcore::${module}::${name} &&data, QObject *parent)
-    : QObject(parent), m_data(std::move(data))
+    : QObject(parent), m_data {std::move(data)}
 {
     % for property in properties:
     % if property["is_qt_object"]:

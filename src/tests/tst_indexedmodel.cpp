@@ -30,8 +30,8 @@
  */
 
 #include <gtest/gtest.h>
-#include <microcore/data/datastore.h>
-#include <microcore/data/model.h>
+#include <microcore/data/indexeddatastore.h>
+#include <microcore/data/indexedmodel.h>
 #include "mockmodellistener.h"
 
 using namespace ::testing;
@@ -60,11 +60,11 @@ public:
     }
 };
 
-class ResultDataStore: public DataStore<int, Result>
+class ResultDataStore: public IndexedDataStore<int, Result>
 {
 public:
     explicit ResultDataStore() = default;
-    std::map<int, Result> & data()
+    std::map<int, std::shared_ptr<Result>> & data()
     {
         return m_data;
     }
@@ -164,55 +164,54 @@ private:
     std::vector<ListenerData> m_data {};
 };
 
-using ResultModel = Model<Result, ResultMapper>;
+using ResultModel = IndexedModel<Result, ResultMapper>;
 using ResultModelListener = MockModelListener<Result>;
 
 }
-class TstModel: public Test
+
+class TstIndexedModel: public Test
 {
+public:
+    explicit TstIndexedModel()
+        : m_listener {new NiceMock<ResultModelListener>()}
+    {
+    }
 protected:
     void SetUp()
     {
         m_dataStore.reset(new ResultDataStore());
         m_model.reset(new ResultModel(*m_dataStore));
-        EXPECT_CALL(m_listener, onDestroyed()).WillRepeatedly(Invoke(static_cast<TstModel *>(this), &TstModel::invalidateOnDestroyed));
-        ON_CALL(m_listener, onAppend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onAppend));
-        ON_CALL(m_listener, onPrepend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onPrepend));
-        ON_CALL(m_listener, onInsert(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInsert));
-        ON_CALL(m_listener, onRemove(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onRemove));
-        ON_CALL(m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
-        ON_CALL(m_listener, onMove(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onMove));
-        ON_CALL(m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
+        ON_CALL(*m_listener, onAppend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onAppend));
+        ON_CALL(*m_listener, onPrepend(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onPrepend));
+        ON_CALL(*m_listener, onInsert(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInsert));
+        ON_CALL(*m_listener, onRemove(_)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onRemove));
+        ON_CALL(*m_listener, onUpdate(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onUpdate));
+        ON_CALL(*m_listener, onMove(_, _)).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onMove));
+        ON_CALL(*m_listener, onInvalidation()).WillByDefault(Invoke(&m_watcher, &ListenerWatcher::onInvalidation));
         m_model->addListener(m_listener);
-    }
-    void invalidateOnDestroyed()
-    {
-        if (!m_invalidated) {
-            m_model->removeListener(m_listener);
-        }
     }
     std::unique_ptr<ResultDataStore> m_dataStore {};
     std::unique_ptr<ResultModel> m_model {};
-    NiceMock<ResultModelListener> m_listener {};
+    std::shared_ptr<NiceMock<ResultModelListener>> m_listener {};
     ListenerWatcher m_watcher {};
     bool m_invalidated {false};
 };
 
-TEST_F(TstModel, InvalidationChain1)
+TEST_F(TstIndexedModel, InvalidationChain1)
 {
     m_model.reset();
     m_invalidated = true;
     m_dataStore.reset();
 }
 
-TEST_F(TstModel, InvalidationChain2)
+TEST_F(TstIndexedModel, InvalidationChain2)
 {
     m_dataStore.reset();
     m_model.reset();
     m_invalidated = true;
 }
 
-TEST_F(TstModel, Append)
+TEST_F(TstIndexedModel, Append)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -222,10 +221,10 @@ TEST_F(TstModel, Append)
         EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ(*it, m_watcher[0].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[0].values[1]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
@@ -238,24 +237,24 @@ TEST_F(TstModel, Append)
         EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         EXPECT_EQ(*it, m_watcher[1].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         EXPECT_EQ(*it, m_watcher[1].values[1]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         EXPECT_EQ(*it, m_watcher[1].values[2]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, AppendAfterInvalidation)
+TEST_F(TstIndexedModel, AppendAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -271,7 +270,7 @@ TEST_F(TstModel, AppendAfterInvalidation)
     }
 }
 
-TEST_F(TstModel, Prepend)
+TEST_F(TstIndexedModel, Prepend)
 {
     m_model->prepend({Result(1), Result(2)});
     {
@@ -281,10 +280,10 @@ TEST_F(TstModel, Prepend)
         EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ(*it, m_watcher[0].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[0].values[1]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
@@ -297,24 +296,24 @@ TEST_F(TstModel, Prepend)
         EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         EXPECT_EQ(*it, m_watcher[1].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         EXPECT_EQ(*it, m_watcher[1].values[1]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         EXPECT_EQ(*it, m_watcher[1].values[2]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, PrependAfterInvalidation)
+TEST_F(TstIndexedModel, PrependAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -330,7 +329,7 @@ TEST_F(TstModel, PrependAfterInvalidation)
     }
 }
 
-TEST_F(TstModel, Insert)
+TEST_F(TstIndexedModel, Insert)
 {
     m_model->insert(0, {Result(1), Result(2)});
     {
@@ -340,10 +339,10 @@ TEST_F(TstModel, Insert)
         EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ(*it, m_watcher[0].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[0].values[1]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
@@ -356,17 +355,17 @@ TEST_F(TstModel, Insert)
         EXPECT_EQ(m_watcher[1].values.size(), static_cast<std::size_t>(3));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         EXPECT_EQ(*it, m_watcher[1].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         EXPECT_EQ(*it, m_watcher[1].values[1]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         EXPECT_EQ(*it, m_watcher[1].values[2]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
@@ -380,24 +379,24 @@ TEST_F(TstModel, Insert)
         EXPECT_EQ(m_watcher[2].values.size(), static_cast<std::size_t>(1));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(6)));
+        EXPECT_EQ(*it, m_dataStore->data().at(6).get());
         EXPECT_EQ(*it, m_watcher[2].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, InsertFailed)
+TEST_F(TstIndexedModel, InsertFailed)
 {
     m_model->insert(1, {Result(0)});
     {
@@ -412,7 +411,7 @@ TEST_F(TstModel, InsertFailed)
     }
 }
 
-TEST_F(TstModel, InsertAfterInvalidation)
+TEST_F(TstIndexedModel, InsertAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -428,7 +427,7 @@ TEST_F(TstModel, InsertAfterInvalidation)
     }
 }
 
-TEST_F(TstModel, Update)
+TEST_F(TstIndexedModel, Update)
 {
     m_model->append({Result(1), Result(2)});
     m_model->update(1, Result(2, 3));
@@ -438,10 +437,10 @@ TEST_F(TstModel, Update)
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ((*it)->value, 1);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[1].value);
         EXPECT_EQ((*it)->value, 3);
         ++it;
@@ -449,7 +448,7 @@ TEST_F(TstModel, Update)
     }
 }
 
-TEST_F(TstModel, UpdateFailed)
+TEST_F(TstIndexedModel, UpdateFailed)
 {
     m_model->update(1, Result(0));
     {
@@ -464,7 +463,7 @@ TEST_F(TstModel, UpdateFailed)
     }
 }
 
-TEST_F(TstModel, UpdateImpactKeys)
+TEST_F(TstIndexedModel, UpdateImpactKeys)
 {
     m_model->append({Result(1), Result(2)});
     m_model->update(1, Result(3));
@@ -474,7 +473,7 @@ TEST_F(TstModel, UpdateImpactKeys)
     }
 }
 
-TEST_F(TstModel, UpdateAfterInvalidation)
+TEST_F(TstIndexedModel, UpdateAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -490,7 +489,7 @@ TEST_F(TstModel, UpdateAfterInvalidation)
     }
 }
 
-TEST_F(TstModel, Remove)
+TEST_F(TstIndexedModel, Remove)
 {
     m_model->append({Result(1), Result(2)});
     m_model->remove(1);
@@ -501,13 +500,13 @@ TEST_F(TstModel, Remove)
         EXPECT_EQ(m_watcher[1].index1, 1);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, RemoveFailed)
+TEST_F(TstIndexedModel, RemoveFailed)
 {
     m_model->remove(1);
     {
@@ -522,7 +521,7 @@ TEST_F(TstModel, RemoveFailed)
     }
 }
 
-TEST_F(TstModel, RemoveAfterInvalidation)
+TEST_F(TstIndexedModel, RemoveAfterInvalidation)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -538,7 +537,7 @@ TEST_F(TstModel, RemoveAfterInvalidation)
     }
 }
 
-TEST_F(TstModel, Move)
+TEST_F(TstIndexedModel, Move)
 {
     m_model->append({Result(1), Result(2), Result(3), Result(4), Result(5)});
     m_model->move(0, 2);
@@ -550,15 +549,15 @@ TEST_F(TstModel, Move)
         EXPECT_EQ(m_watcher[1].index2, 2);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
@@ -571,21 +570,21 @@ TEST_F(TstModel, Move)
         EXPECT_EQ(m_watcher[2].index2, 0);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(3)));
+        EXPECT_EQ(*it, m_dataStore->data().at(3).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(4)));
+        EXPECT_EQ(*it, m_dataStore->data().at(4).get());
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(5)));
+        EXPECT_EQ(*it, m_dataStore->data().at(5).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, MoveFailed)
+TEST_F(TstIndexedModel, MoveFailed)
 {
     m_model->append({Result(1), Result(2), Result(3), Result(4), Result(5)});
     m_model->move(5, 2);
@@ -606,7 +605,7 @@ TEST_F(TstModel, MoveFailed)
     }
 }
 
-TEST_F(TstModel, ExternalUpdate)
+TEST_F(TstIndexedModel, ExternalUpdate)
 {
     m_model->append({Result(1), Result(2)});
     m_dataStore->update(2, Result(2, 3));
@@ -616,10 +615,10 @@ TEST_F(TstModel, ExternalUpdate)
         EXPECT_EQ(m_watcher[1].type, ListenerData::Type::Update);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ((*it)->value, 1);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[1].value);
         EXPECT_EQ((*it)->value, 3);
         ++it;
@@ -627,7 +626,7 @@ TEST_F(TstModel, ExternalUpdate)
     }
 }
 
-TEST_F(TstModel, ExternalUpdateFailed)
+TEST_F(TstIndexedModel, ExternalUpdateFailed)
 {
     m_model->append({Result(1), Result(2)});
     m_dataStore->addUnique(3, Result(3));
@@ -638,7 +637,7 @@ TEST_F(TstModel, ExternalUpdateFailed)
     }
 }
 
-TEST_F(TstModel, ExternalRemove)
+TEST_F(TstIndexedModel, ExternalRemove)
 {
     m_model->append({Result(1), Result(2)});
     m_dataStore->remove(2);
@@ -649,13 +648,13 @@ TEST_F(TstModel, ExternalRemove)
         EXPECT_EQ(m_watcher[1].index1, 1);
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, ExternalRemoveFailed)
+TEST_F(TstIndexedModel, ExternalRemoveFailed)
 {
     m_model->append({Result(1), Result(2)});
     m_dataStore->addUnique(3, Result(3));
@@ -666,7 +665,7 @@ TEST_F(TstModel, ExternalRemoveFailed)
     }
 }
 
-TEST_F(TstModel, Accessors)
+TEST_F(TstIndexedModel, Accessors)
 {
     m_model->append({Result(1), Result(2)});
     {
@@ -675,14 +674,14 @@ TEST_F(TstModel, Accessors)
         const ResultModel &constModel = *m_model;
         auto it = std::begin(*m_model);
         auto constIt = std::begin(constModel);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
-        EXPECT_EQ((*constIt), &(m_dataStore->data().at(1)));
-        EXPECT_EQ(constModel[0], &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
+        EXPECT_EQ((*constIt), m_dataStore->data().at(1).get());
+        EXPECT_EQ(constModel[0], m_dataStore->data().at(1).get());
         ++it;
         ++constIt;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
-        EXPECT_EQ((*constIt), &(m_dataStore->data().at(2)));
-        EXPECT_EQ(constModel[1], &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
+        EXPECT_EQ((*constIt), m_dataStore->data().at(2).get());
+        EXPECT_EQ(constModel[1], m_dataStore->data().at(2).get());
         ++it;
         ++constIt;
         EXPECT_TRUE(it == std::end(*m_model));
@@ -691,7 +690,7 @@ TEST_F(TstModel, Accessors)
     }
 }
 
-TEST_F(TstModel, ListenerDelayAdd)
+TEST_F(TstIndexedModel, ListenerDelayAdd)
 {
     m_model->removeListener(m_listener);
     m_model->append({Result(1), Result(2)});
@@ -703,19 +702,18 @@ TEST_F(TstModel, ListenerDelayAdd)
         EXPECT_EQ(m_watcher[0].values.size(), static_cast<std::size_t>(2));
 
         auto it = std::begin(*m_model);
-        EXPECT_EQ(*it, &(m_dataStore->data().at(1)));
+        EXPECT_EQ(*it, m_dataStore->data().at(1).get());
         EXPECT_EQ(*it, m_watcher[0].values[0]);
         ++it;
-        EXPECT_EQ(*it, &(m_dataStore->data().at(2)));
+        EXPECT_EQ(*it, m_dataStore->data().at(2).get());
         EXPECT_EQ(*it, m_watcher[0].values[1]);
         ++it;
         EXPECT_TRUE(it == std::end(*m_model));
     }
 }
 
-TEST_F(TstModel, ListenerInvalidation)
+TEST_F(TstIndexedModel, ListenerInvalidation)
 {
-    m_model->addListener(m_listener);
     EXPECT_EQ(m_watcher.count(), 0);
 
     m_model.reset();

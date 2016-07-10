@@ -29,34 +29,59 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE."
  */
 
-#ifndef MICROCORE_DATA_IITEM_H
-#define MICROCORE_DATA_IITEM_H
+#ifndef IINDEXEDDATASTORE_H
+#define IINDEXEDDATASTORE_H
 
 #include <microcore/data/type_helper.h>
 #include <memory>
 
 namespace microcore { namespace data {
 
-template<class T>
-class IItem
+/**
+ * @brief Interface for a data store
+ *
+ * This interface describes a data store.
+ *
+ * A data store is used to store key-value pairs
+ * and notify that content of the store has changed.
+ *
+ * To add, remove or update the content of the store,
+ * the following methods must be implemented
+ * - add()
+ * - remove()
+ * - update()
+ *
+ * In addition, the data store use listeners to perform
+ * notifications. The following methods must be implemented
+ * to handle them
+ * - addListener()
+ * - removeListener()
+ */
+template<class K, class V>
+class IIndexedDataStore
 {
 public:
-    using Type = T;
+    using ValuePtr = std::shared_ptr<V>;
     class IListener
     {
     public:
         using Ptr = std::shared_ptr<IListener>;
+        using ValuePtr = std::shared_ptr<V>;
         virtual ~IListener() {}
-        virtual void onUpdate(const T &value) = 0;
+        virtual void onAdd(arg_const_reference<K> key, const ValuePtr &value) = 0;
+        virtual void onRemove(arg_const_reference<K> key) = 0;
+        virtual void onUpdate(arg_const_reference<K> key, const ValuePtr &value) = 0;
         virtual void onInvalidation() = 0;
     };
-    virtual ~IItem() {}
-    virtual const T & data() const = 0;
-    virtual void setData(T &&data) = 0;
+    virtual ~IIndexedDataStore() {}
+    virtual ValuePtr addUnique(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual ValuePtr add(arg_rvalue_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual ValuePtr update(arg_const_reference<K> key, arg_rvalue_reference<V> value) = 0;
+    virtual bool remove(arg_const_reference<K> key) = 0;
     virtual void addListener(const typename IListener::Ptr &listener) = 0;
     virtual void removeListener(const typename IListener::Ptr &listener) = 0;
 };
 
 }}
 
-#endif // MICROCORE_DATA_IITEM_H
+#endif // IINDEXEDDATASTORE_H
